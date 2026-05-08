@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { BLOOD_GROUPS } from '../data/mockData';
 import { useApp } from '../utils/AppContext';
 import { useAlert } from '../components/CustomAlert';
+import { validatePhone, validatePassword } from '../utils/AppContext';
 
 export default function RegisterScreen({ navigation }) {
   const { registerDonor } = useApp();
@@ -15,17 +16,39 @@ export default function RegisterScreen({ navigation }) {
   const [blood, setBlood] = useState('');
   const [date, setDate] = useState('');
   const [city, setCity] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (!name) { showAlert('Missing Field', 'Please enter your full name.'); return; }
-    if (!phone) { showAlert('Missing Field', 'Please enter your phone number.'); return; }
-    if (!password) { showAlert('Missing Field', 'Please create a password.'); return; }
+  const handleSubmit = async () => {
+    if (!name || name.trim().length < 2) { showAlert('Invalid Name', 'Please enter your full name (at least 2 characters).'); return; }
+    
+    const phoneResult = validatePhone(phone);
+    if (!phoneResult.valid) { showAlert('Invalid Phone', 'Please enter a valid 10-digit Indian phone number.\n\nExample: 9876543210'); return; }
+    
+    const passResult = validatePassword(password);
+    if (!passResult.valid) { showAlert('Weak Password', passResult.error); return; }
+    
     if (!blood) { showAlert('Missing Field', 'Please select your blood group.'); return; }
-    if (!city) { showAlert('Missing Field', 'Please enter your city.'); return; }
+    if (!city || city.trim().length < 2) { showAlert('Missing Field', 'Please enter your city (at least 2 characters).'); return; }
 
-    registerDonor({ name, phone, password, blood, lastDonation: date || '2025-01-01', city, available: true });
-    showToast(`Welcome ${name}! Registration successful 🩸`);
-    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    // Validate date format if provided
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      showAlert('Invalid Date', 'Please enter date in YYYY-MM-DD format.\n\nExample: 2025-06-15');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await registerDonor({ name: name.trim(), phone: phoneResult.phone, password, blood, lastDonation: date || '2025-01-01', city: city.trim(), available: true });
+      if (result.success) {
+        showToast(`Welcome ${name.trim()}! Registration successful 🩸`);
+        // Navigation handled automatically by App.js auth state
+      } else {
+        showAlert('Registration Failed', result.error || 'Something went wrong. Please try again.');
+      }
+    } catch (e) {
+      showAlert('Error', 'Registration failed. Please check your internet connection.');
+    }
+    setLoading(false);
   };
 
   return (
@@ -43,9 +66,9 @@ export default function RegisterScreen({ navigation }) {
         <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter your full name" placeholderTextColor={COLORS.text3} />
 
         <Text style={styles.label}>PHONE NUMBER *</Text>
-        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+91 XXXXX XXXXX" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" />
+        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="10-digit phone number" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
 
-        <Text style={styles.label}>CREATE PASSWORD *</Text>
+        <Text style={styles.label}>CREATE PASSWORD *  (min 4 characters)</Text>
         <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Create a strong password" placeholderTextColor={COLORS.text3} secureTextEntry />
 
         <Text style={styles.label}>BLOOD GROUP *</Text>
@@ -63,9 +86,15 @@ export default function RegisterScreen({ navigation }) {
         <Text style={styles.label}>CITY / TALUKA *</Text>
         <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="e.g. Pune" placeholderTextColor={COLORS.text3} />
 
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} activeOpacity={0.85}>
-          <MaterialIcons name="how-to-reg" size={22} color="#fff" />
-          <Text style={styles.submitText}>Complete Registration</Text>
+        <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleSubmit} activeOpacity={0.85} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <MaterialIcons name="how-to-reg" size={22} color="#fff" />
+              <Text style={styles.submitText}>Complete Registration</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>

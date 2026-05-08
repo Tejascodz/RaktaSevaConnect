@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { useApp } from '../utils/AppContext';
 import { useAlert } from '../components/CustomAlert';
+import { validatePhone, validatePassword } from '../utils/AppContext';
 
 export default function HospitalLoginScreen({ navigation }) {
   const { loginHospitalAuth, registerHospital } = useApp();
   const { showAlert, showToast } = useAlert();
   const [tab, setTab] = useState('login');
+  const [loading, setLoading] = useState(false);
+
+  // Login fields
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  
   // Register fields
   const [hName, setHName] = useState('');
   const [hCity, setHCity] = useState('');
@@ -20,21 +25,54 @@ export default function HospitalLoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!code || !password) { showAlert('Missing Fields', 'Please enter hospital code and password.'); return; }
-    const result = await loginHospitalAuth(code, password);
-    if (result.success) {
-      showToast(`Welcome, ${result.hospital.name}! 🏥`);
-      navigation.reset({ index: 0, routes: [{ name: 'HospitalMain' }] });
-    } else {
-      showAlert('Login Failed', 'Invalid hospital code or password.\n\nMake sure you have registered your hospital in the database.');
+    
+    setLoading(true);
+    try {
+      const result = await loginHospitalAuth(code, password);
+      if (result.success) {
+        showToast(`Welcome, ${result.hospital.name}! 🏥`);
+        // App.js handles the navigation based on hospital state automatically
+      } else {
+        showAlert('Login Failed', result.error || 'Invalid hospital code or password.');
+      }
+    } catch (e) {
+      showAlert('Error', 'Login failed. Please check your internet connection.');
     }
+    setLoading(false);
   };
 
   const handleRegister = async () => {
-    if (!hName || !hCity || !hPhone || !hPass) { showAlert('Missing Fields', 'Please fill all required fields.'); return; }
-    const newCode = await registerHospital({ name: hName, city: hCity, phone: hPhone, email: hEmail, password: hPass });
-    showAlert('Registration Successful! 🏥', `Your Hospital Code: ${newCode}\n\nHospital: ${hName}\nCity: ${hCity}\n\nSave your code for future logins.`,
-      [{ text: 'Continue', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'HospitalMain' }] }) }]
-    );
+    if (!hName || hName.trim().length < 3) { showAlert('Invalid Name', 'Please enter a valid hospital name (at least 3 characters).'); return; }
+    if (!hCity || hCity.trim().length < 2) { showAlert('Invalid City', 'Please enter your city/taluka.'); return; }
+    
+    const phoneResult = validatePhone(hPhone);
+    if (!phoneResult.valid) {
+      showAlert('Invalid Phone', 'Please enter a valid 10-digit Indian phone number.\n\nExample: 9876543210');
+      return;
+    }
+
+    const passResult = validatePassword(hPass);
+    if (!passResult.valid) {
+      showAlert('Weak Password', passResult.error);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await registerHospital({ name: hName, city: hCity, phone: phoneResult.phone, email: hEmail, password: hPass });
+      if (result.success) {
+        showAlert(
+          'Registration Successful! 🏥', 
+          `Your Hospital Code: ${result.code}\n\nSave this code for future logins. You will now be redirected to the dashboard.`,
+          [{ text: 'Continue', onPress: () => {} }]
+        );
+      } else {
+        showAlert('Registration Failed', result.error || 'Something went wrong.');
+      }
+    } catch (e) {
+      showAlert('Error', 'Registration failed. Please check your internet connection.');
+    }
+    setLoading(false);
   };
 
   return (
@@ -67,14 +105,17 @@ export default function HospitalLoginScreen({ navigation }) {
             <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="e.g. SAH001" placeholderTextColor={COLORS.text3} autoCapitalize="characters" />
             <Text style={styles.label}>PASSWORD *</Text>
             <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter password" placeholderTextColor={COLORS.text3} secureTextEntry />
-            <TouchableOpacity style={styles.submitBtn} onPress={handleLogin} activeOpacity={0.85}>
-              <MaterialIcons name="login" size={20} color="#fff" />
-              <Text style={styles.submitText}>Login to Dashboard</Text>
+            
+            <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <MaterialIcons name="login" size={20} color="#fff" />
+                  <Text style={styles.submitText}>Login to Dashboard</Text>
+                </>
+              )}
             </TouchableOpacity>
-            <View style={styles.demoBox}>
-              <MaterialIcons name="info" size={16} color={COLORS.blue} />
-              <Text style={styles.demoText}>Demo: Code SAH001 | Password 1234</Text>
-            </View>
           </>
         ) : (
           <>
@@ -83,14 +124,21 @@ export default function HospitalLoginScreen({ navigation }) {
             <Text style={styles.label}>CITY / TALUKA *</Text>
             <TextInput style={styles.input} value={hCity} onChangeText={setHCity} placeholder="e.g. Pune" placeholderTextColor={COLORS.text3} />
             <Text style={styles.label}>PHONE NUMBER *</Text>
-            <TextInput style={styles.input} value={hPhone} onChangeText={setHPhone} placeholder="+91 XXXXX XXXXX" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" />
+            <TextInput style={styles.input} value={hPhone} onChangeText={setHPhone} placeholder="10-digit phone number" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
             <Text style={styles.label}>EMAIL (optional)</Text>
             <TextInput style={styles.input} value={hEmail} onChangeText={setHEmail} placeholder="hospital@email.com" placeholderTextColor={COLORS.text3} keyboardType="email-address" />
             <Text style={styles.label}>CREATE PASSWORD *</Text>
-            <TextInput style={styles.input} value={hPass} onChangeText={setHPass} placeholder="Create a password" placeholderTextColor={COLORS.text3} secureTextEntry />
-            <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} activeOpacity={0.85}>
-              <MaterialIcons name="add-business" size={20} color="#fff" />
-              <Text style={styles.submitText}>Register Hospital</Text>
+            <TextInput style={styles.input} value={hPass} onChangeText={setHPass} placeholder="Create a strong password" placeholderTextColor={COLORS.text3} secureTextEntry />
+            
+            <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleRegister} activeOpacity={0.85} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <MaterialIcons name="add-business" size={20} color="#fff" />
+                  <Text style={styles.submitText}>Register Hospital</Text>
+                </>
+              )}
             </TouchableOpacity>
           </>
         )}
@@ -115,6 +163,4 @@ const styles = StyleSheet.create({
   input: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.sm, padding: 14, fontSize: 15, color: COLORS.text },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.blue, borderRadius: RADIUS.full, paddingVertical: 16, marginTop: 28, elevation: 6 },
   submitText: { fontSize: 16, fontWeight: '700', color: '#fff' },
-  demoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderRadius: RADIUS.sm, backgroundColor: COLORS.blueLight, marginTop: 16 },
-  demoText: { fontSize: 12, color: COLORS.blue, fontWeight: '500' },
 });

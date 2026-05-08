@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
-import { AppProvider } from './src/utils/AppContext';
+import { AppProvider, useApp } from './src/utils/AppContext';
 import { AlertProvider } from './src/components/CustomAlert';
 
 import SplashScreen from './src/screens/SplashScreen';
@@ -47,23 +47,55 @@ function DonorTabs() {
   );
 }
 
+function AppNavigator() {
+  const { user, hospital } = useApp();
+
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={BG} />
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: BG }, animation: 'slide_from_right' }}
+      >
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        
+        {/* Auth screens */}
+        {!user && !hospital && (
+          <>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="DonorLogin" component={DonorLoginScreen} />
+            <Stack.Screen name="HospitalLogin" component={HospitalLoginScreen} />
+          </>
+        )}
+
+        {/* Donor screens */}
+        {user && (
+          <>
+            <Stack.Screen name="Main" component={DonorTabs} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
+            <Stack.Screen name="NewRequest" component={NewRequestScreen} options={{ animation: 'slide_from_bottom' }} />
+          </>
+        )}
+
+        {/* Hospital screens */}
+        {hospital && (
+          <>
+            <Stack.Screen name="HospitalMain" component={HospitalDashboardScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <AppProvider>
       <AlertProvider>
         <NavigationContainer>
-          <StatusBar barStyle="light-content" backgroundColor={BG} />
-          <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: BG }, animation: 'slide_from_right' }}>
-            <Stack.Screen name="Splash" component={SplashScreen} />
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="DonorLogin" component={DonorLoginScreen} />
-            <Stack.Screen name="HospitalLogin" component={HospitalLoginScreen} />
-            <Stack.Screen name="Main" component={DonorTabs} />
-            <Stack.Screen name="HospitalMain" component={HospitalDashboardScreen} />
-            <Stack.Screen name="Notifications" component={NotificationsScreen} />
-            <Stack.Screen name="NewRequest" component={NewRequestScreen} options={{ animation: 'slide_from_bottom' }} />
-          </Stack.Navigator>
+          <AppNavigator />
         </NavigationContainer>
       </AlertProvider>
     </AppProvider>

@@ -13,6 +13,23 @@ export default function NotificationsScreen({ navigation }) {
     info: { bg: COLORS.blueLight, color: COLORS.blue },
   };
 
+  const formatTime = (notification) => {
+    if (notification.time) return notification.time;
+    if (notification.createdAt?.toDate) {
+      const date = notification.createdAt.toDate();
+      const now = new Date();
+      const diff = now - date;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+    return 'Recently';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -23,23 +40,29 @@ export default function NotificationsScreen({ navigation }) {
           <Text style={styles.h2}>Notifications</Text>
           <Text style={styles.sub}>{notifications.filter(n => n.unread).length} unread alerts</Text>
         </View>
-        <TouchableOpacity style={styles.markBtn} onPress={markAllRead}>
+        <TouchableOpacity style={styles.markBtn} onPress={() => markAllRead?.()}>
           <Text style={styles.markText}>Mark all read</Text>
         </TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        {notifications.map(n => (
+        {notifications.length > 0 ? notifications.map(n => (
           <View key={n.id} style={[styles.item, n.unread && styles.itemUnread]}>
-            <View style={[styles.iconWrap, { backgroundColor: colorMap[n.type]?.bg }]}>
-              <MaterialIcons name={iconMap[n.type]} size={20} color={colorMap[n.type]?.color} />
+            <View style={[styles.iconWrap, { backgroundColor: colorMap[n.type]?.bg || COLORS.blueLight }]}>
+              <MaterialIcons name={iconMap[n.type] || 'info'} size={20} color={colorMap[n.type]?.color || COLORS.blue} />
             </View>
             <View style={styles.content}>
               <Text style={styles.title}>{n.title}</Text>
               <Text style={styles.desc}>{n.desc}</Text>
-              <Text style={styles.time}>{n.time}</Text>
+              <Text style={styles.time}>{formatTime(n)}</Text>
             </View>
           </View>
-        ))}
+        )) : (
+          <View style={styles.empty}>
+            <MaterialIcons name="notifications-none" size={64} color={COLORS.text3} />
+            <Text style={styles.emptyTitle}>No Notifications</Text>
+            <Text style={styles.emptySub}>You'll be notified when there are blood requests</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -60,4 +83,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 2 },
   desc: { fontSize: 12, color: COLORS.text2 },
   time: { fontSize: 10, color: COLORS.text3, marginTop: 4 },
+  empty: { alignItems: 'center', paddingTop: 80 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginTop: 16 },
+  emptySub: { fontSize: 13, color: COLORS.text2, marginTop: 6, textAlign: 'center' },
 });

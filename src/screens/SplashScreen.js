@@ -1,29 +1,57 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../utils/theme';
+import { useApp } from '../utils/AppContext';
 
 export default function SplashScreen({ navigation }) {
+  const { user, hospital, isLoading } = useApp();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.7)).current;
   const barAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
     ]).start();
+    
     Animated.timing(barAnim, { toValue: 1, duration: 2000, useNativeDriver: false }).start();
-    const timer = setTimeout(() => navigation.replace('Onboarding'), 2500);
+    
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+    
+    // Set ready after 2.5 seconds minimum visual display
+    const timer = setTimeout(() => setIsReady(true), 2500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    // Only navigate when both the animations have finished AND data has loaded
+    if (isReady && !isLoading) {
+      if (user) {
+        navigation.replace('Main');
+      } else if (hospital) {
+        navigation.replace('HospitalMain');
+      } else {
+        navigation.replace('Onboarding');
+      }
+    }
+  }, [isReady, isLoading, user, hospital, navigation]);
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.inner, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.iconWrap}>
+        <Animated.View style={[styles.iconWrap, { transform: [{ scale: pulseAnim }] }]}>
           <MaterialIcons name="water-drop" size={56} color={COLORS.red} />
-        </View>
+        </Animated.View>
         <Text style={styles.title}>Rakta-<Text style={{ color: COLORS.red }}>Seva</Text></Text>
         <Text style={styles.subtitle}>Life-Saving Blood Donor Network</Text>
         <View style={styles.loaderTrack}>

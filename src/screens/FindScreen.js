@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TextInput, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { RequestCard } from '../components/Cards';
@@ -10,6 +10,17 @@ export default function FindScreen() {
   const { requests, acceptRequest } = useApp();
   const { showAlert, showToast } = useAlert();
   const [query, setQuery] = useState('');
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true })
+    ]).start();
+  }, []);
+
   const filtered = requests.filter(r =>
     r.blood.toLowerCase().includes(query.toLowerCase()) ||
     r.hospital.toLowerCase().includes(query.toLowerCase())
@@ -32,15 +43,17 @@ export default function FindScreen() {
         <TextInput style={styles.searchInput} placeholder="Search by blood group or hospital..." placeholderTextColor={COLORS.text3} value={query} onChangeText={setQuery} />
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        {filtered.length ? filtered.map(r => (
-          <RequestCard key={r.id} request={r} onAccept={handleAccept} onShare={() => showToast('📋 Request link copied!')} />
-        )) : (
-          <View style={styles.empty}>
-            <MaterialIcons name="search-off" size={64} color={COLORS.text3} />
-            <Text style={styles.emptyTitle}>No Results</Text>
-            <Text style={styles.emptySub}>Try a different search term</Text>
-          </View>
-        )}
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          {filtered.length ? filtered.map(r => (
+            <RequestCard key={r.id} request={r} onAccept={handleAccept} onShare={() => showToast('📋 Request link copied!')} />
+          )) : (
+            <View style={styles.empty}>
+              <MaterialIcons name="search-off" size={64} color={COLORS.text3} />
+              <Text style={styles.emptyTitle}>No Results</Text>
+              <Text style={styles.emptySub}>Try a different search term</Text>
+            </View>
+          )}
+        </Animated.View>
       </ScrollView>
     </View>
   );

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { COLORS, RADIUS } from '../utils/theme';
 import { BLOOD_GROUPS, isDonorAvailable } from '../data/mockData';
 import { DonorCard } from '../components/Cards';
@@ -9,6 +9,16 @@ export default function DonorsScreen({ route }) {
   const { donors } = useApp();
   const initialFilter = route?.params?.filterBlood || '';
   const [filter, setFilter] = useState(initialFilter);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true })
+    ]).start();
+  }, [filter]); // Re-animate when filter changes
 
   const filtered = filter ? donors.filter(d => d.blood === filter) : donors;
   const sorted = [...filtered].sort((a, b) => {
@@ -23,19 +33,23 @@ export default function DonorsScreen({ route }) {
         <Text style={styles.h2}>Donor Directory</Text>
         <Text style={styles.sub}>Verified voluntary blood donors near you</Text>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-        <TouchableOpacity style={[styles.chip, !filter && styles.chipActive]} onPress={() => setFilter('')}>
-          <Text style={[styles.chipText, !filter && styles.chipTextActive]}>All</Text>
-        </TouchableOpacity>
-        {BLOOD_GROUPS.map(g => (
-          <TouchableOpacity key={g} style={[styles.chip, filter === g && styles.chipActive]} onPress={() => setFilter(g)}>
-            <Text style={[styles.chipText, filter === g && styles.chipTextActive]}>{g}</Text>
+      <View style={{ height: 60 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          <TouchableOpacity style={[styles.chip, !filter && styles.chipActive]} onPress={() => setFilter('')}>
+            <Text style={[styles.chipText, !filter && styles.chipTextActive]}>All</Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          {BLOOD_GROUPS.map(g => (
+            <TouchableOpacity key={g} style={[styles.chip, filter === g && styles.chipActive]} onPress={() => setFilter(g)}>
+              <Text style={[styles.chipText, filter === g && styles.chipTextActive]}>{g}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}>
-        {sorted.map(d => <DonorCard key={d.id} donor={d} isAvail={isDonorAvailable(d)} />)}
-        {sorted.length === 0 && <View style={styles.empty}><Text style={styles.emptyText}>No donors found for {filter}</Text></View>}
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          {sorted.map(d => <DonorCard key={d.id} donor={d} isAvail={isDonorAvailable(d)} />)}
+          {sorted.length === 0 && <View style={styles.empty}><Text style={styles.emptyText}>No donors found for {filter}</Text></View>}
+        </Animated.View>
       </ScrollView>
     </View>
   );

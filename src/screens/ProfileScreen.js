@@ -9,14 +9,24 @@ export default function ProfileScreen({ navigation }) {
   const { user, toggleAvailability, logoutDonor } = useApp();
   const { showAlert, showToast } = useAlert();
 
-  if (!user) return <View style={styles.container}><Text style={{ color: COLORS.text, textAlign: 'center', marginTop: 100 }}>Please register first</Text></View>;
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <MaterialIcons name="person-off" size={64} color={COLORS.text3} />
+          <Text style={styles.emptyTitle}>Not Logged In</Text>
+          <Text style={styles.emptySub}>Please log in to view your profile</Text>
+        </View>
+      </View>
+    );
+  }
 
-  const initials = user.name.split(' ').map(w => w[0]).join('');
+  const initials = (user.name || 'U').split(' ').map(w => w?.[0] || '').join('').toUpperCase() || 'U';
   
   const handleLogout = () => {
     showAlert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => { logoutDonor(); navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] }); } },
+      { text: 'Log Out', style: 'destructive', onPress: () => { logoutDonor(); } },
     ]);
   };
 
@@ -26,20 +36,19 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const showHistory = () => {
-    showAlert('Donation History', 'Blood Group: ' + user.blood + '\nTotal Donations: 1\nLast Donation: ' + user.lastDonation + '\n\nThank you for saving lives! 🩸', [{ text: 'Close' }]);
+    showAlert('Donation History', 'Blood Group: ' + (user.blood || 'N/A') + '\nTotal Donations: 1\nLast Donation: ' + (user.lastDonation || 'N/A') + '\n\nThank you for saving lives! 🩸', [{ text: 'Close' }]);
   };
 
   const showAbout = () => {
-    showAlert('About Rakta-Seva Connect', 'Version: 1.0.0 (Build 42)\nDeveloped by: DeepMind Team\n\nA world-class emergency blood donor network connecting hospitals and donors in the golden hour.', [{ text: 'Awesome!' }]);
+    showAlert('About Rakta-Seva Connect', 'Version: 1.0.0\nDeveloped by: Tejas\n\nA world-class emergency blood donor network connecting hospitals and donors in the golden hour.', [{ text: 'Awesome!' }]);
   };
 
   const menuItems = [
-    { icon: 'water-drop', label: `Blood Group: ${user.blood}`, color: 'rgba(220,20,60,0.12)', iconColor: COLORS.red, onPress: () => showToast(`Blood Group: ${user.blood}`) },
-    { icon: 'phone', label: `Phone: ${user.phone}`, color: COLORS.greenLight, iconColor: COLORS.green, onPress: () => showToast(`Phone: ${user.phone}`) },
-    { icon: 'location-on', label: `Location: ${user.city}`, color: COLORS.amberLight, iconColor: COLORS.amber, onPress: () => showToast(`Location: ${user.city}`) },
-    { icon: 'event', label: `Last Donation: ${user.lastDonation}`, color: COLORS.blueLight, iconColor: COLORS.blue, onPress: () => showToast(`Last Donation: ${user.lastDonation}`) },
+    { icon: 'water-drop', label: `Blood Group: ${user.blood || 'N/A'}`, color: 'rgba(220,20,60,0.12)', iconColor: COLORS.red, onPress: () => showToast(`Blood Group: ${user.blood}`) },
+    { icon: 'phone', label: `Phone: ${user.phone || 'N/A'}`, color: COLORS.greenLight, iconColor: COLORS.green, onPress: () => showToast(`Phone: ${user.phone}`) },
+    { icon: 'location-on', label: `Location: ${user.city || 'N/A'}`, color: COLORS.amberLight, iconColor: COLORS.amber, onPress: () => showToast(`Location: ${user.city}`) },
+    { icon: 'event', label: `Last Donation: ${user.lastDonation || 'N/A'}`, color: COLORS.blueLight, iconColor: COLORS.blue, onPress: () => showToast(`Last Donation: ${user.lastDonation}`) },
     { icon: 'history', label: 'Donation History', color: COLORS.blueLight, iconColor: COLORS.blue, onPress: showHistory },
-    { icon: 'security', label: 'Privacy Settings', color: COLORS.greenLight, iconColor: COLORS.green, onPress: () => showToast('Privacy settings updated') },
     { icon: 'info', label: 'About Rakta-Seva', color: 'rgba(220,20,60,0.12)', iconColor: COLORS.red, onPress: showAbout },
   ];
 
@@ -48,8 +57,8 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.profileHeader}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
-          <Text style={styles.name}>{user.name}</Text>
-          <Text style={styles.blood}>Blood Group: {user.blood}</Text>
+          <Text style={styles.name}>{user.name || 'Donor'}</Text>
+          <Text style={styles.blood}>Blood Group: {user.blood || 'N/A'}</Text>
         </View>
         <View style={styles.toggleCard}>
           <View>
@@ -81,6 +90,9 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, marginTop: 16 },
+  emptySub: { fontSize: 14, color: COLORS.text2, marginTop: 6, textAlign: 'center' },
   profileHeader: { alignItems: 'center', paddingTop: 60, paddingBottom: 20 },
   avatar: { width: 80, height: 80, borderRadius: 24, backgroundColor: COLORS.red, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   avatarText: { fontSize: 30, fontWeight: '800', color: '#fff' },
