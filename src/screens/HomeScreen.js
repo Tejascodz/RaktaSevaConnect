@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   bannerGlow: { position: 'absolute', top: -50, right: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.red, opacity: 0.15 },
   bannerTag: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   bannerTagText: { fontSize: 10, fontWeight: '700', color: COLORS.red, letterSpacing: 2 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.red, shadowColor: COLORS.red, shadowOffset: {width: 0, height: 0}, shadowOpacity: 1, shadowRadius: 4, elevation: 5 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.red },
   bannerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   bannerSub: { fontSize: 13, color: COLORS.text2 },
   statsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 20 },

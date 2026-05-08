@@ -86,7 +86,7 @@ export function useAlert() { return useContext(AlertContext); }
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 32 },
-  alertBox: { width: '100%', maxWidth: 340, backgroundColor: COLORS.bg2, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 },
+  alertBox: { width: '100%', maxWidth: 340, backgroundColor: COLORS.bg2, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border },
   alertTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8, textAlign: 'center' },
   alertMsg: { fontSize: 14, color: COLORS.text2, lineHeight: 20, textAlign: 'center', marginBottom: 24 },
   alertBtns: { flexDirection: 'row', gap: 10 },
@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
   alertBtnPrimary: { backgroundColor: COLORS.red },
   alertBtnDestructive: { backgroundColor: 'rgba(220,20,60,0.15)' },
   alertBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  toast: { position: 'absolute', bottom: 100, left: 24, right: 24, backgroundColor: COLORS.green, borderRadius: 50, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, zIndex: 9999 },
+  toast: { position: 'absolute', bottom: 100, left: 24, right: 24, backgroundColor: COLORS.green, borderRadius: 50, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: 9999 },
   toastText: { color: '#fff', fontSize: 13, fontWeight: '600', flex: 1 },
 });
