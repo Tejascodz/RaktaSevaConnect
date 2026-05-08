@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -16,7 +16,6 @@ import FindScreen from './src/screens/FindScreen';
 import DonorsScreen from './src/screens/DonorsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
-import NewRequestScreen from './src/screens/NewRequestScreen';
 import HospitalLoginScreen from './src/screens/HospitalLoginScreen';
 import HospitalDashboardScreen from './src/screens/HospitalDashboardScreen';
 
@@ -59,7 +58,7 @@ function AppNavigator() {
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         
-        {/* Auth screens */}
+        {/* Auth screens — only when not logged in */}
         {!user && !hospital && (
           <>
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -69,12 +68,11 @@ function AppNavigator() {
           </>
         )}
 
-        {/* Donor screens */}
+        {/* Donor screens — NO NewRequest, donors only view/accept */}
         {user && (
           <>
             <Stack.Screen name="Main" component={DonorTabs} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
-            <Stack.Screen name="NewRequest" component={NewRequestScreen} options={{ animation: 'slide_from_bottom' }} />
           </>
         )}
 

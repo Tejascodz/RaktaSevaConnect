@@ -221,7 +221,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     borderWidth: 1.5,
-    borderStyle: 'dashed',
   },
   glowRing2: {
     position: 'absolute',
@@ -229,8 +228,6 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 120,
     borderWidth: 1,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
   },
   title: {
     fontSize: 30,

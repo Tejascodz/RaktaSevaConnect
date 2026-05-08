@@ -114,10 +114,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </Animated.View>
       </ScrollView>
-
-      <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => navigation.navigate('NewRequest')}>
-        <MaterialIcons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -131,7 +127,7 @@ const styles = StyleSheet.create({
   notifBadge: { position: 'absolute', top: -3, right: -3, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.red, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.bg },
   notifBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
   banner: { marginHorizontal: 16, marginBottom: 16, padding: 18, borderRadius: RADIUS.lg, backgroundColor: 'rgba(220,20,60,0.12)', borderWidth: 1, borderColor: 'rgba(220,20,60,0.25)', overflow: 'hidden' },
-  bannerGlow: { position: 'absolute', top: -50, right: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.red, opacity: 0.4, filter: 'blur(30px)' },
+  bannerGlow: { position: 'absolute', top: -50, right: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: COLORS.red, opacity: 0.15 },
   bannerTag: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   bannerTagText: { fontSize: 10, fontWeight: '700', color: COLORS.red, letterSpacing: 2 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.red, shadowColor: COLORS.red, shadowOffset: {width: 0, height: 0}, shadowOpacity: 1, shadowRadius: 4, elevation: 5 },
@@ -143,5 +139,4 @@ const styles = StyleSheet.create({
   sectionLink: { fontSize: 12, fontWeight: '600', color: COLORS.red },
   bloodGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginBottom: 24 },
   listPad: { paddingHorizontal: 16 },
-  fab: { position: 'absolute', bottom: 80, right: 16, width: 56, height: 56, borderRadius: 18, backgroundColor: COLORS.red, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: COLORS.red, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16 },
 });
