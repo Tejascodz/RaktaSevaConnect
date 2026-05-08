@@ -29,9 +29,10 @@ export const MOCK_NOTIFICATIONS = [
 ];
 
 export function isDonorAvailable(donor) {
-  if (!donor.available) return false;
-  const daysSince = (Date.now() - new Date(donor.lastDonation).getTime()) / (1000*60*60*24);
-  return daysSince >= 90;
+  if (!donor || !donor.available) return false;
+  const lastDonation = donor.lastDonation || '2025-01-01';
+  const daysSince = (Date.now() - new Date(lastDonation).getTime()) / (1000*60*60*24);
+  return isNaN(daysSince) ? false : daysSince >= 90;
 }
 
 export function daysSinceDonation(dateStr) {

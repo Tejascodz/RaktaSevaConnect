@@ -4,30 +4,31 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../utils/theme';
 
 export function RequestCard({ request, onAccept, onShare }) {
-  const isCritical = request.urgency === 'critical';
+  const urgency = request?.urgency || 'high';
+  const isCritical = urgency === 'critical';
   return (
     <View style={[styles.card, isCritical && styles.cardUrgent]}>
       <View style={styles.top}>
-        <Text style={styles.blood}>{request.blood}</Text>
+        <Text style={styles.blood}>{request?.blood || 'O+'}</Text>
         <View style={[styles.badge, isCritical ? styles.badgeCritical : styles.badgeHigh]}>
           <Text style={[styles.badgeText, { color: isCritical ? COLORS.red : COLORS.amber }]}>
-            {request.urgency.toUpperCase()}
+            {urgency.toUpperCase()}
           </Text>
         </View>
       </View>
-      <Text style={styles.hospital}>{request.hospital}</Text>
+      <Text style={styles.hospital}>{request?.hospital || 'Hospital'}</Text>
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <MaterialIcons name="schedule" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request.time}</Text>
+          <Text style={styles.metaText}>{request?.time || 'Just now'}</Text>
         </View>
         <View style={styles.metaItem}>
           <MaterialIcons name="place" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request.distance}</Text>
+          <Text style={styles.metaText}>{request?.distance || 'Nearby'}</Text>
         </View>
         <View style={styles.metaItem}>
           <MaterialIcons name="water-drop" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request.units} unit{request.units > 1 ? 's' : ''}</Text>
+          <Text style={styles.metaText}>{request?.units || 1} unit{(request?.units || 1) > 1 ? 's' : ''}</Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -44,22 +45,25 @@ export function RequestCard({ request, onAccept, onShare }) {
 }
 
 export function DonorCard({ donor, isAvail }) {
-  const initials = donor.name.split(' ').map(w => w[0]).join('');
-  const days = Math.floor((Date.now() - new Date(donor.lastDonation).getTime()) / (1000*60*60*24));
+  const name = donor?.name || 'Unknown Donor';
+  const initials = name.split(' ').map(w => w?.[0] || '').join('').substring(0, 2).toUpperCase() || 'U';
+  const lastDonation = donor?.lastDonation || '2025-01-01';
+  const days = Math.floor((Date.now() - new Date(lastDonation).getTime()) / (1000*60*60*24)) || 0;
+  
   return (
     <View style={styles.donorCard}>
       <View style={styles.donorAvatar}>
         <Text style={styles.donorAvatarText}>{initials}</Text>
       </View>
       <View style={styles.donorInfo}>
-        <Text style={styles.donorName}>{donor.name}</Text>
+        <Text style={styles.donorName}>{name}</Text>
         <View style={styles.donorDetail}>
           <MaterialIcons name="water-drop" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{donor.blood} · {donor.distance} km</Text>
+          <Text style={styles.metaText}>{donor?.blood || 'O+'} · {donor?.distance || 1.0} km</Text>
         </View>
         <View style={styles.donorDetail}>
           <MaterialIcons name="event" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>Donated {days} days ago</Text>
+          <Text style={styles.metaText}>Donated {isNaN(days) ? 0 : days} days ago</Text>
         </View>
       </View>
       <View style={[styles.statusBadge, isAvail ? styles.statusAvail : styles.statusUnavail]}>

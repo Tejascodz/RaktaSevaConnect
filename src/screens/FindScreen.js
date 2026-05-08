@@ -22,8 +22,8 @@ export default function FindScreen() {
   }, []);
 
   const filtered = requests.filter(r =>
-    r.blood.toLowerCase().includes(query.toLowerCase()) ||
-    r.hospital.toLowerCase().includes(query.toLowerCase())
+    (r?.blood || '').toLowerCase().includes(query.toLowerCase()) ||
+    (r?.hospital || '').toLowerCase().includes(query.toLowerCase())
   );
 
   const handleAccept = (req) => {

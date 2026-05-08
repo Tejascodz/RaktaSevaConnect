@@ -144,9 +144,10 @@ export function AppProvider({ children }) {
       };
       await setDoc(doc(db, 'donors', phoneResult.phone), newDonor);
       
-      // Store without password hash locally
+      // Store without password hash and without non-serializable serverTimestamp locally
       const localUser = { ...newDonor, phone: phoneResult.phone };
       delete localUser.password;
+      delete localUser.createdAt;
       setUser(localUser);
       await AsyncStorage.setItem('currentUser', JSON.stringify(localUser));
       return { success: true, user: localUser };
@@ -211,6 +212,7 @@ export function AppProvider({ children }) {
 
       const localHosp = { ...newHosp };
       delete localHosp.password;
+      delete localHosp.createdAt;
       setHospital(localHosp);
       await AsyncStorage.setItem('currentHospital', JSON.stringify(localHosp));
       return { success: true, code };
