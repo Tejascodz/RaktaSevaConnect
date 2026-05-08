@@ -17,7 +17,6 @@
     },
     "android": {
       "package": "com.raktaseva.app",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
