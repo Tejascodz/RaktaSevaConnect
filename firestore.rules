@@ -2,45 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 🩸 DONORS COLLECTION
-    // Any user can read the donor list (hospitals need to see availability)
-    // Donors can only create or update their own profile (doc ID = phone number)
-    match /donors/{phone} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name', 'phone', 'blood', 'city', 'role']) 
-                    && request.resource.data.role == 'donor';
-      // In a strict production environment with Firebase Auth, we would check: request.auth.uid == phone
-      allow update: if true; 
-    }
-
-    // 🏥 HOSPITALS COLLECTION
-    // Anyone can read hospital data
-    // Hospitals can only be created with the correct role
-    match /hospitals/{code} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name', 'code', 'city', 'role']) 
-                    && request.resource.data.role == 'hospital';
-      allow update: if true;
-    }
-
-    // 🚨 EMERGENCY REQUESTS COLLECTION
-    // Anyone can read active requests
-    // Hospitals can create requests. Donors can update them (to accept them).
-    match /requests/{requestId} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['blood', 'units', 'hospital', 'status']);
-      // Allow donors to append their name to the 'accepted' array
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accepted', 'status']);
-    }
-
-    // 🔔 NOTIFICATIONS COLLECTION
-    // Users can only read notifications intended for them (targetId)
-    // Anyone (system or hospital) can create a notification to alert someone
-    match /notifications/{notificationId} {
-      allow read: if resource.data.targetId != null; // Simplified for this prototype
-      allow create: if request.resource.data.keys().hasAll(['targetId', 'type', 'title', 'unread']);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unread']);
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

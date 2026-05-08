@@ -152,7 +152,7 @@ export function AppProvider({ children }) {
       return { success: true, user: localUser };
     } catch (e) {
       console.error("Firebase Registration Error", e);
-      return { success: false, error: 'Registration failed. Please check your internet connection.' };
+      return { success: false, error: 'Registration failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
     }
   };
 
@@ -175,7 +175,7 @@ export function AppProvider({ children }) {
       return { success: false, error: 'Invalid phone number or password.' };
     } catch (e) {
       console.error(e);
-      return { success: false, error: 'Network error. Please check your internet connection.' };
+      return { success: false, error: 'Login failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
     }
   };
 
@@ -216,7 +216,7 @@ export function AppProvider({ children }) {
       return { success: true, code };
     } catch (e) {
       console.error(e);
-      return { success: false, error: 'Registration failed. Please check your internet connection.' };
+      return { success: false, error: 'Hospital registration failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
     }
   };
 
@@ -233,7 +233,7 @@ export function AppProvider({ children }) {
       return { success: false, error: 'Invalid hospital code or password.' };
     } catch (e) {
       console.error(e);
-      return { success: false, error: 'Network error. Please check your internet connection.' };
+      return { success: false, error: 'Hospital login failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
     }
   };
 
