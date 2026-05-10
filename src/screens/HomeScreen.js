@@ -37,8 +37,8 @@ export default function HomeScreen({ navigation }) {
 
     // 3. Staggered List Entry
     Animated.parallel([
-      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }),
-      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, delay: 100, useNativeDriver: true })
+      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
     ]).start();
   }, []);
 
