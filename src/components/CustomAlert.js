@@ -22,26 +22,26 @@ export function AlertProvider({ children }) {
   const showAlert = useCallback((title, message, buttons = [{ text: 'OK' }]) => {
     setAlert({ title, message, buttons });
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true })
+      Animated.spring(scaleAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: false }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: false })
     ]).start();
   }, [scaleAnim, fadeAnim]);
 
   const hideAlert = useCallback(() => {
     Animated.parallel([
-      Animated.timing(scaleAnim, { toValue: 0.8, duration: 150, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true })
+      Animated.timing(scaleAnim, { toValue: 0.8, duration: 150, useNativeDriver: false }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: false })
     ]).start(() => setAlert(null));
   }, [scaleAnim, fadeAnim]);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     // Slide up
-    Animated.spring(toastAnim, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }).start();
+    Animated.spring(toastAnim, { toValue: 0, tension: 50, friction: 8, useNativeDriver: false }).start();
     
     setTimeout(() => {
       // Slide down
-      Animated.timing(toastAnim, { toValue: 100, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: true }).start(() => setToast(null));
+      Animated.timing(toastAnim, { toValue: 100, duration: 250, easing: Easing.in(Easing.ease), useNativeDriver: false }).start(() => setToast(null));
     }, 3000);
   }, [toastAnim]);
 

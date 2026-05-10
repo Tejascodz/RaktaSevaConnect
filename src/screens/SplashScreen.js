@@ -15,16 +15,16 @@ export default function SplashScreen({ navigation }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: false }),
     ]).start();
     
     Animated.timing(barAnim, { toValue: 1, duration: 2000, useNativeDriver: false }).start();
     
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
       ])
     ).start();
     

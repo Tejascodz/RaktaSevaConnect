@@ -39,13 +39,13 @@ export default function OnboardingScreen({ navigation }) {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: false })
       ])
     ).start();
 
     Animated.loop(
-      Animated.timing(rotateAnim, { toValue: 1, duration: 10000, useNativeDriver: true })
+      Animated.timing(rotateAnim, { toValue: 1, duration: 10000, useNativeDriver: false })
     ).start();
   }, []);
 

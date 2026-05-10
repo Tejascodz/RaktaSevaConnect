@@ -22,8 +22,8 @@ export default function HospitalDashboardScreen({ navigation }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: false })
     ]).start();
   }, []);
 

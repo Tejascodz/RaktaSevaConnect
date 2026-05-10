@@ -21,8 +21,8 @@ export default function HomeScreen({ navigation }) {
     // 1. Live Dot Heartbeat Pulse
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.8, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.8, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
         Animated.delay(600),
       ])
     ).start();
@@ -30,15 +30,15 @@ export default function HomeScreen({ navigation }) {
     // 2. Banner Glow Float Effect
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: false }),
       ])
     ).start();
 
     // 3. Staggered List Entry
     Animated.parallel([
-      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: false })
     ]).start();
   }, []);
 
