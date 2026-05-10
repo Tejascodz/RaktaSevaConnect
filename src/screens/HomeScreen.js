@@ -58,6 +58,9 @@ export default function HomeScreen({ navigation }) {
           <MaterialIcons name="water-drop" size={22} color={COLORS.red} />
         </View>
         <Text style={styles.headerTitle}>Rakta-<Text style={{ color: COLORS.red }}>Seva</Text></Text>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Profile')}>
+          <MaterialIcons name="person" size={22} color={COLORS.text} />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Notifications')}>
           <MaterialIcons name="notifications" size={22} color={COLORS.text} />
           {unreadCount > 0 && <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{unreadCount}</Text></View>}

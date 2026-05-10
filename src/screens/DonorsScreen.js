@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { BLOOD_GROUPS, isDonorAvailable } from '../data/mockData';
 import { DonorCard } from '../components/Cards';
 import { useApp } from '../utils/AppContext';
 
-export default function DonorsScreen({ route }) {
+export default function DonorsScreen({ route, navigation }) {
   const { donors } = useApp();
   const initialFilter = route?.params?.filterBlood || '';
   const [filter, setFilter] = useState(initialFilter);
@@ -30,8 +31,13 @@ export default function DonorsScreen({ route }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.h2}>Donor Directory</Text>
-        <Text style={styles.sub}>Verified voluntary blood donors near you</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.h2}>Donor Directory</Text>
+          <Text style={styles.sub}>Verified voluntary blood donors</Text>
+        </View>
       </View>
       <View style={{ height: 60 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -57,7 +63,8 @@ export default function DonorsScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 4 },
+  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface2, justifyContent: 'center', alignItems: 'center' },
   h2: { fontSize: 22, fontWeight: '700', color: COLORS.text },
   sub: { fontSize: 13, color: COLORS.text2, marginTop: 2 },
   chipRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },

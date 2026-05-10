@@ -6,7 +6,7 @@ import { RequestCard } from '../components/Cards';
 import { useApp } from '../utils/AppContext';
 import { useAlert } from '../components/CustomAlert';
 
-export default function FindScreen() {
+export default function FindScreen({ navigation }) {
   const { requests, acceptRequest } = useApp();
   const { showAlert, showToast } = useAlert();
   const [query, setQuery] = useState('');
@@ -35,8 +35,13 @@ export default function FindScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.h2}>Emergency Requests</Text>
-        <Text style={styles.sub}>Respond to save a life nearby</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.h2}>Emergency Requests</Text>
+          <Text style={styles.sub}>Respond to save a life nearby</Text>
+        </View>
       </View>
       <View style={styles.searchWrap}>
         <MaterialIcons name="search" size={20} color={COLORS.text3} style={{ marginRight: 8 }} />
@@ -61,7 +66,8 @@ export default function FindScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 8 },
+  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface2, justifyContent: 'center', alignItems: 'center' },
   h2: { fontSize: 22, fontWeight: '700', color: COLORS.text },
   sub: { fontSize: 13, color: COLORS.text2, marginTop: 2 },
   searchWrap: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginVertical: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },

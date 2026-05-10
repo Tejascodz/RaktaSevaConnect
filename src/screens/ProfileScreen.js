@@ -54,6 +54,11 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.profileHeader}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
@@ -90,6 +95,8 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 0 },
+  backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface2, justifyContent: 'center', alignItems: 'center' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, marginTop: 16 },
   emptySub: { fontSize: 14, color: COLORS.text2, marginTop: 6, textAlign: 'center' },
