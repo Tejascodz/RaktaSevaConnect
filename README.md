@@ -3,7 +3,7 @@
 
 <div align="center">
 
-![RaktaSeva Banner](assets/icon.png)
+![RaktaSeva Banner](assets/splash-icon.png)
 
 **A real-time cross-platform mobile application connecting blood donors and hospitals**
 
@@ -334,3 +334,4 @@ This project is developed for educational purposes as part of an internship prog
 *RaktaSevaConnect — Every drop counts when saving a life*
 
 </div>
+
