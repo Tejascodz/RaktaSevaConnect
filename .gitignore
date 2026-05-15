@@ -1,41 +1,70 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.development
+.env.production
 
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
 .expo/
 dist/
 web-build/
-expo-env.d.ts
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Android build outputs
+android/app/build/
+android/.gradle/
+android/local.properties
 
-# Metro
-.metro-health-check*
+# iOS
+ios/Pods/
+ios/build/
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Logs
+*.log
+npm-debug.log*
 
-# macOS
+# OS files
 .DS_Store
-*.pem
+Thumbs.db
 
-# local env files
-.env*.local
+# Firebase service account keys
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
 
-# typescript
-*.tsbuildinfo
+# APK files (large binary)
+*.apk
+*.aab
 
-# generated native folders
-/ios
-/android
+# Cleanup scripts with sensitive data
+cleanup-firebase.js
+
+# PowerShell build scripts (optional - can keep)
+preflight-check.ps1
+rebuild-clean.ps1
+rebuild-nuclear.ps1
+
+# Backup files
+src/screens/OnboardingScreen.js.backup
+
+# Documentation (optional - can keep)
+# RaktaSeva_Documentation.md
+
+# Firebase cleanup script
+cleanup-firebase.js
+
+# More build scripts
+build.ps1
+build_apk.ps1
+build_local.ps1
+new.sh
+audit-code.ps1
+fix-navigation-precise.ps1
+fix-navigation.ps1
+
+# IDE files
+.idea/
+
+# Android folder (too large)
+android/

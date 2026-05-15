@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Modal, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, Modal, Animated, SafeAreaView, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { BLOOD_GROUPS, isDonorAvailable } from '../data/mockData';
@@ -17,21 +17,37 @@ export default function HospitalDashboardScreen({ navigation }) {
   const [contactPhone, setContactPhone] = useState(hospital?.phone || '');
   const [urgency, setUrgency] = useState('critical');
 
-  const listFadeAnim = useRef(new Animated.Value(0)).current;
-  const listTranslateAnim = useRef(new Animated.Value(30)).current;
+  const listFadeAnim = useRef(new Animated.Value(1)).current;
+  const listTranslateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: false })
+      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
     ]).start();
   }, []);
 
-  if (!hospital) return null;
+  if (!hospital) return (
+    <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <ActivityIndicator size='large' color={COLORS.blue} />
+      <Text style={{ color: COLORS.text2, marginTop: 12 }}>Loading hospital data...</Text>
+    </View>
+  );
 
-  const myRequests = requests.filter(r => r.hospital === hospital.name || r.hospitalCode === hospital.code);
-  const nearbyDonors = donors.filter(isDonorAvailable);
-  const totalAccepted = myRequests.reduce((sum, r) => sum + (r.accepted?.length || 0), 0);
+  const myRequests = useMemo(() =>
+    (requests || []).filter(r => r.hospital === hospital.name || r.hospitalCode === hospital.code),
+    [requests, hospital]
+  );
+
+  const nearbyDonors = useMemo(() =>
+    (donors || []).filter(isDonorAvailable),
+    [donors]
+  );
+
+  const totalAccepted = useMemo(() =>
+    myRequests.reduce((sum, r) => sum + (r.accepted?.length || 0), 0),
+    [myRequests]
+  );
 
   const handlePostRequest = () => {
     if (!blood || !contact) { showAlert('Missing Fields', 'Please select blood group and enter contact person.'); return; }
@@ -42,10 +58,21 @@ export default function HospitalDashboardScreen({ navigation }) {
       return;
     }
 
-    addRequest({ blood, units: parseInt(units) || 1, hospital: hospital.name, hospitalCode: hospital.code, urgency, contact, contactPhone: phoneResult.phone });
+    addRequest({
+      blood,
+      units: parseInt(units) || 1,
+      hospital: hospital.name,
+      hospitalCode: hospital.code,
+      urgency,
+      contact,
+      contactPhone: phoneResult.phone
+    });
+
     setShowModal(false);
-    setBlood(''); setUnits('1'); setContact(''); setContactPhone(hospital.phone);
-    showAlert('🚨 Alert Sent!', `Emergency request for ${blood} blood (${units} units) has been pushed to all ${nearbyDonors.filter(d => d.blood === blood).length} matching donors within 10km!`,
+    setBlood(''); setUnits('1'); setContact(''); setContactPhone(hospital.phone || '');
+
+    const matchCount = nearbyDonors.filter(d => d.blood === blood).length;
+    showAlert('🚨 Alert Sent!', `Emergency request for ${blood} blood (${units} units) has been pushed to all ${matchCount} matching donors nearby!`,
       [{ text: 'OK' }]);
     showToast(`Alert sent to matching ${blood} donors!`);
   };
@@ -53,7 +80,7 @@ export default function HospitalDashboardScreen({ navigation }) {
   const handleLogout = () => {
     showAlert('Log Out', 'Are you sure you want to log out of hospital portal?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => logoutHospital() },
+      { text: 'Log Out', style: 'destructive', onPress: () => { logoutHospital(); navigation.replace('Onboarding'); } },
     ]);
   };
 
@@ -67,112 +94,120 @@ export default function HospitalDashboardScreen({ navigation }) {
     ]);
   };
 
+  const renderHeader = () => (
+    <Animated.View style={{ opacity: listFadeAnim, transform: [{ translateY: listTranslateAnim }] }}>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={[styles.statNum, { color: COLORS.red }]}>{myRequests.length}</Text>
+          <Text style={styles.statLabel}>My Requests</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={[styles.statNum, { color: COLORS.green }]}>{totalAccepted}</Text>
+          <Text style={styles.statLabel}>Donors Responded</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={[styles.statNum, { color: COLORS.amber }]}>{nearbyDonors.length}</Text>
+          <Text style={styles.statLabel}>Available Nearby</Text>
+        </View>
+      </View>
+
+      <View style={styles.quickActions}>
+        <TouchableOpacity style={styles.actionCard} onPress={() => setShowModal(true)} activeOpacity={0.85}>
+          <View style={[styles.actionIcon, { backgroundColor: 'rgba(220,20,60,0.12)' }]}>
+            <MaterialIcons name="campaign" size={24} color={COLORS.red} />
+          </View>
+          <Text style={styles.actionTitle}>Post Emergency</Text>
+          <Text style={styles.actionDesc}>Send mass alert</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Blood Availability (10km)</Text></View>
+      <View style={styles.bloodGrid}>
+        {BLOOD_GROUPS.map(g => {
+          const avail = donors.filter(d => d.blood === g && isDonorAvailable(d)).length;
+          return (
+            <View key={g} style={styles.bloodItem}>
+              <Text style={styles.bloodGroup}>{g}</Text>
+              <Text style={[styles.bloodCount, { color: avail > 0 ? COLORS.green : COLORS.red }]}>{avail}</Text>
+              <Text style={styles.bloodLabel}>donors</Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>My Active Requests</Text></View>
+      <View style={styles.listPad}>
+        {myRequests.length > 0 ? myRequests.map(r => (
+          <View key={r.id} style={[styles.reqCard, r.urgency === 'critical' && styles.reqCardUrgent]}>
+            <View style={styles.reqTop}>
+              <Text style={styles.reqBlood}>{r.blood}</Text>
+              <View style={[styles.reqBadge, r.urgency === 'critical' ? styles.badgeCrit : styles.badgeHigh]}>
+                <Text style={[styles.reqBadgeText, { color: r.urgency === 'critical' ? COLORS.red : COLORS.amber }]}>{r.urgency.toUpperCase()}</Text>
+              </View>
+            </View>
+            <Text style={styles.reqHospital}>{r.units} units · {r.time || 'Active'}</Text>
+            <View style={styles.reqResponded}>
+              <MaterialIcons name="check-circle" size={14} color={COLORS.green} />
+              <Text style={styles.reqRespondedText}>{r.accepted?.length || 0} donor(s) responded</Text>
+            </View>
+          </View>
+        )) : (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="inbox" size={48} color={COLORS.text3} />
+            <Text style={styles.emptyText}>No requests posted yet</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Available Donors Nearby</Text></View>
+    </Animated.View>
+  );
+
+  const renderDonor = ({ item: d }) => {
+    const initials = (d.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase();
+    return (
+      <View style={styles.donorRow}>
+        <View style={styles.donorAvatar}><Text style={styles.donorInitials}>{initials}</Text></View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.donorName}>{d.name}</Text>
+          <Text style={styles.donorMeta}>{d.blood} · {d.distance || 0} km</Text>
+        </View>
+        <TouchableOpacity style={styles.donorReqBtn} onPress={() => handleSendRequest(d)} activeOpacity={0.7}>
+          <MaterialIcons name="send" size={14} color={COLORS.blue} />
+          <Text style={styles.donorReqText}>Request</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={{ flex: 1 }}>
       <View style={styles.header}>
         <View style={styles.hospBadge}><MaterialIcons name="local-hospital" size={20} color={COLORS.blue} /></View>
         <View style={{ flex: 1 }}>
           <Text style={styles.hospName} numberOfLines={1}>{hospital.name}</Text>
           <Text style={styles.hospCode}>Code: {hospital.code}</Text>
         </View>
-        <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
+        <TouchableOpacity style={styles.headerBtn} onPress={handleLogout} activeOpacity={0.7}>
           <MaterialIcons name="logout" size={20} color={COLORS.text2} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        <Animated.View style={{ opacity: listFadeAnim, transform: [{ translateY: listTranslateAnim }] }}>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: COLORS.red }]}>{myRequests.length}</Text>
-              <Text style={styles.statLabel}>My Requests</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: COLORS.green }]}>{totalAccepted}</Text>
-              <Text style={styles.statLabel}>Donors Responded</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statNum, { color: COLORS.amber }]}>{nearbyDonors.length}</Text>
-              <Text style={styles.statLabel}>Available Nearby</Text>
-            </View>
+      <FlatList
+        data={nearbyDonors}
+        renderItem={renderDonor}
+        keyExtractor={item => item.id.toString()}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialIcons name="person-off" size={48} color={COLORS.text3} />
+            <Text style={styles.emptyText}>No donors found nearby</Text>
           </View>
-
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionCard} onPress={() => setShowModal(true)} activeOpacity={0.85}>
-              <View style={[styles.actionIcon, { backgroundColor: 'rgba(220,20,60,0.12)' }]}>
-                <MaterialIcons name="campaign" size={24} color={COLORS.red} />
-              </View>
-              <Text style={styles.actionTitle}>Post Emergency</Text>
-              <Text style={styles.actionDesc}>Send mass alert</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Blood Availability (10km)</Text></View>
-          <View style={styles.bloodGrid}>
-            {BLOOD_GROUPS.map(g => {
-              const avail = donors.filter(d => d.blood === g && isDonorAvailable(d)).length;
-              return (
-                <View key={g} style={styles.bloodItem}>
-                  <Text style={styles.bloodGroup}>{g}</Text>
-                  <Text style={[styles.bloodCount, { color: avail > 0 ? COLORS.green : COLORS.red }]}>{avail}</Text>
-                  <Text style={styles.bloodLabel}>donors</Text>
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>My Active Requests</Text></View>
-          <View style={styles.listPad}>
-            {myRequests.length > 0 ? myRequests.map(r => (
-              <View key={r.id} style={[styles.reqCard, r.urgency === 'critical' && styles.reqCardUrgent]}>
-                <View style={styles.reqTop}>
-                  <Text style={styles.reqBlood}>{r.blood}</Text>
-                  <View style={[styles.reqBadge, r.urgency === 'critical' ? styles.badgeCrit : styles.badgeHigh]}>
-                    <Text style={[styles.reqBadgeText, { color: r.urgency === 'critical' ? COLORS.red : COLORS.amber }]}>{r.urgency.toUpperCase()}</Text>
-                  </View>
-                </View>
-                <Text style={styles.reqHospital}>{r.units} units · {r.time}</Text>
-                <View style={styles.reqResponded}>
-                  <MaterialIcons name="check-circle" size={14} color={COLORS.green} />
-                  <Text style={styles.reqRespondedText}>{r.accepted?.length || 0} donor(s) responded</Text>
-                </View>
-                {r.accepted?.length > 0 && (
-                  <View style={styles.acceptedDonors}>
-                    <Text style={styles.acceptedLabel}>Responding Donors:</Text>
-                    {r.accepted.map((name, i) => <Text key={i} style={styles.acceptedName}>• {name}</Text>)}
-                  </View>
-                )}
-              </View>
-            )) : (
-              <View style={styles.emptyState}>
-                <MaterialIcons name="inbox" size={48} color={COLORS.text3} />
-                <Text style={styles.emptyText}>No requests posted yet</Text>
-                <Text style={styles.emptySubtext}>Tap "Post Emergency" to create one</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Available Donors Nearby</Text></View>
-          <View style={styles.listPad}>
-            {nearbyDonors.map(d => {
-              const initials = d.name.split(' ').map(w => w[0]).join('');
-              return (
-                <View key={d.id} style={styles.donorRow}>
-                  <View style={styles.donorAvatar}><Text style={styles.donorInitials}>{initials}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.donorName}>{d.name}</Text>
-                    <Text style={styles.donorMeta}>{d.blood} · {d.distance} km</Text>
-                  </View>
-                  <TouchableOpacity style={styles.donorReqBtn} onPress={() => handleSendRequest(d)}>
-                    <MaterialIcons name="send" size={14} color={COLORS.blue} />
-                    <Text style={styles.donorReqText}>Request</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-        </Animated.View>
-      </ScrollView>
+        }
+      />
 
       <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => setShowModal(true)}>
         <MaterialIcons name="campaign" size={26} color="#fff" />
@@ -188,7 +223,7 @@ export default function HospitalDashboardScreen({ navigation }) {
             <Text style={styles.label}>BLOOD GROUP *</Text>
             <View style={styles.modalBloodGrid}>
               {BLOOD_GROUPS.map(g => (
-                <TouchableOpacity key={g} style={[styles.modalChip, blood === g && styles.modalChipActive]} onPress={() => setBlood(g)}>
+                <TouchableOpacity key={g} style={[styles.modalChip, blood === g && styles.modalChipActive]} onPress={() => setBlood(g)} activeOpacity={0.7}>
                   <Text style={[styles.modalChipText, blood === g && styles.modalChipTextActive]}>{g}</Text>
                 </TouchableOpacity>
               ))}
@@ -201,7 +236,7 @@ export default function HospitalDashboardScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>URGENCY</Text>
-                <TouchableOpacity style={[styles.urgChip, urgency === 'critical' ? styles.urgCritActive : styles.urgHighActive]} onPress={() => setUrgency(urgency === 'critical' ? 'high' : 'critical')}>
+                <TouchableOpacity style={[styles.urgChip, urgency === 'critical' ? styles.urgCritActive : styles.urgHighActive]} onPress={() => setUrgency(urgency === 'critical' ? 'high' : 'critical')} activeOpacity={0.7}>
                   <Text style={[styles.urgText, { color: urgency === 'critical' ? COLORS.red : COLORS.amber }]}>{urgency.toUpperCase()}</Text>
                 </TouchableOpacity>
               </View>
@@ -214,7 +249,7 @@ export default function HospitalDashboardScreen({ navigation }) {
             <TextInput style={styles.modalInput} value={contactPhone} onChangeText={setContactPhone} placeholder="10-digit number" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)} activeOpacity={0.7}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.postBtn} onPress={handlePostRequest} activeOpacity={0.85}>
@@ -225,13 +260,14 @@ export default function HospitalDashboardScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 12, gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, gap: 12 },
   hospBadge: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.blueLight, justifyContent: 'center', alignItems: 'center' },
   hospName: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   hospCode: { fontSize: 11, color: COLORS.text2, marginTop: 1 },
@@ -264,13 +300,9 @@ const styles = StyleSheet.create({
   reqHospital: { fontSize: 12, color: COLORS.text2, marginBottom: 6 },
   reqResponded: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   reqRespondedText: { fontSize: 12, color: COLORS.green, fontWeight: '500' },
-  acceptedDonors: { marginTop: 10, padding: 10, backgroundColor: COLORS.surface, borderRadius: RADIUS.sm },
-  acceptedLabel: { fontSize: 11, fontWeight: '700', color: COLORS.text2, marginBottom: 4 },
-  acceptedName: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
   emptyState: { alignItems: 'center', paddingVertical: 32 },
   emptyText: { fontSize: 14, fontWeight: '600', color: COLORS.text2, marginTop: 12 },
-  emptySubtext: { fontSize: 12, color: COLORS.text3, marginTop: 4 },
-  donorRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  donorRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   donorAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.red, justifyContent: 'center', alignItems: 'center' },
   donorInitials: { fontSize: 16, fontWeight: '700', color: '#fff' },
   donorName: { fontSize: 14, fontWeight: '700', color: COLORS.text },
@@ -299,3 +331,11 @@ const styles = StyleSheet.create({
   postBtn: { flex: 2, paddingVertical: 14, borderRadius: RADIUS.full, backgroundColor: COLORS.red, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   postText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 });
+
+
+
+
+
+
+
+

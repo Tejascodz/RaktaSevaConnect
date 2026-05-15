@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 import { useApp } from '../utils/AppContext';
@@ -24,30 +24,40 @@ export default function HospitalLoginScreen({ navigation }) {
   const [hPass, setHPass] = useState('');
 
   const handleLogin = async () => {
-    if (!code || !password) { showAlert('Missing Fields', 'Please enter hospital code and password.'); return; }
+    if (!code || !password) {
+      showAlert('Missing Fields', 'Please enter hospital code and password.');
+      return;
+    }
     
     setLoading(true);
     try {
       const result = await loginHospitalAuth(code, password);
       if (result.success) {
-        showToast(`Welcome, ${result.hospital.name}! 🏥`);
-        // App.js handles the navigation based on hospital state automatically
+        showToast(`Welcome back, ${result.hospital.name}! 🏥`);
+        navigation.replace('HospitalMain');
       } else {
         showAlert('Login Failed', result.error || 'Invalid hospital code or password.');
       }
     } catch (e) {
       showAlert('Error', 'Login failed. Please check your internet connection.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRegister = async () => {
-    if (!hName || hName.trim().length < 3) { showAlert('Invalid Name', 'Please enter a valid hospital name (at least 3 characters).'); return; }
-    if (!hCity || hCity.trim().length < 2) { showAlert('Invalid City', 'Please enter your city/taluka.'); return; }
+    if (!hName || hName.trim().length < 3) {
+      showAlert('Invalid Name', 'Please enter a valid hospital name.');
+      return;
+    }
+    if (!hCity || hCity.trim().length < 2) {
+      showAlert('Invalid City', 'Please enter your city.');
+      return;
+    }
     
     const phoneResult = validatePhone(hPhone);
     if (!phoneResult.valid) {
-      showAlert('Invalid Phone', 'Please enter a valid 10-digit Indian phone number.\n\nExample: 9876543210');
+      showAlert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
       return;
     }
 
@@ -59,97 +69,140 @@ export default function HospitalLoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const result = await registerHospital({ name: hName, city: hCity, phone: phoneResult.phone, email: hEmail, password: hPass });
+      const result = await registerHospital({
+        name: hName.trim(),
+        city: hCity.trim(),
+        phone: phoneResult.phone,
+        email: hEmail.trim(),
+        password: hPass
+      });
       if (result.success) {
         showAlert(
           'Registration Successful! 🏥', 
-          `Your Hospital Code: ${result.code}\n\nSave this code for future logins. You will now be redirected to the dashboard.`,
-          [{ text: 'Continue', onPress: () => {} }]
+          `Your Hospital Code: ${result.code}\n\nSave this code for future logins.`,
+          [{ text: 'Continue', onPress: () => navigation.replace('HospitalMain') }]
         );
       } else {
         showAlert('Registration Failed', result.error || 'Something went wrong.');
       }
     } catch (e) {
-      showAlert('Error', 'Registration failed. Please check your internet connection.');
+      showAlert('Error', 'Registration failed. Check your internet.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
-        </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+          <View style={styles.hospIcon}>
+            <MaterialIcons name="local-hospital" size={40} color={COLORS.blue} />
+          </View>
+          <Text style={styles.h1}>Hospital Portal</Text>
+          <Text style={styles.sub}>Manage emergency blood requests</Text>
+
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'login' && styles.tabActive]}
+              onPress={() => setTab('login')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, tab === 'login' && styles.tabTextActive]}>Login</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, tab === 'register' && styles.tabActive]}
+              onPress={() => setTab('register')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, tab === 'register' && styles.tabTextActive]}>Register</Text>
+            </TouchableOpacity>
+          </View>
+
+          {tab === 'login' ? (
+            <>
+              <Text style={styles.label}>HOSPITAL CODE *</Text>
+              <TextInput
+                style={styles.input}
+                value={code}
+                onChangeText={setCode}
+                placeholder="e.g. SAH001"
+                placeholderTextColor={COLORS.text3}
+                autoCapitalize="characters"
+              />
+              <Text style={styles.label}>PASSWORD *</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter password"
+                placeholderTextColor={COLORS.text3}
+                secureTextEntry
+              />
+
+              <TouchableOpacity
+                style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+                onPress={handleLogin}
+                activeOpacity={0.85}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <MaterialIcons name="login" size={20} color="#fff" />
+                    <Text style={styles.submitText}>Login to Dashboard</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.label}>HOSPITAL NAME *</Text>
+              <TextInput style={styles.input} value={hName} onChangeText={setHName} placeholder="Enter hospital name" placeholderTextColor={COLORS.text3} />
+              <Text style={styles.label}>CITY / TALUKA *</Text>
+              <TextInput style={styles.input} value={hCity} onChangeText={setHCity} placeholder="e.g. Pune" placeholderTextColor={COLORS.text3} />
+              <Text style={styles.label}>PHONE NUMBER *</Text>
+              <TextInput style={styles.input} value={hPhone} onChangeText={setHPhone} placeholder="10-digit number" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
+              <Text style={styles.label}>EMAIL (optional)</Text>
+              <TextInput style={styles.input} value={hEmail} onChangeText={setHEmail} placeholder="hospital@email.com" placeholderTextColor={COLORS.text3} keyboardType="email-address" />
+              <Text style={styles.label}>CREATE PASSWORD *</Text>
+              <TextInput style={styles.input} value={hPass} onChangeText={setHPass} placeholder="Create password" placeholderTextColor={COLORS.text3} secureTextEntry />
+
+              <TouchableOpacity
+                style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+                onPress={handleRegister}
+                activeOpacity={0.85}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <MaterialIcons name="add-business" size={20} color="#fff" />
+                    <Text style={styles.submitText}>Register Hospital</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
-        <View style={styles.hospIcon}>
-          <MaterialIcons name="local-hospital" size={40} color={COLORS.blue} />
-        </View>
-        <Text style={styles.h1}>Hospital Portal</Text>
-        <Text style={styles.sub}>Manage emergency blood requests & track donors</Text>
-
-        {/* Tab Switcher */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity style={[styles.tab, tab === 'login' && styles.tabActive]} onPress={() => setTab('login')}>
-            <Text style={[styles.tabText, tab === 'login' && styles.tabTextActive]}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, tab === 'register' && styles.tabActive]} onPress={() => setTab('register')}>
-            <Text style={[styles.tabText, tab === 'register' && styles.tabTextActive]}>Register</Text>
-          </TouchableOpacity>
-        </View>
-
-        {tab === 'login' ? (
-          <>
-            <Text style={styles.label}>HOSPITAL CODE *</Text>
-            <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="e.g. SAH001" placeholderTextColor={COLORS.text3} autoCapitalize="characters" />
-            <Text style={styles.label}>PASSWORD *</Text>
-            <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Enter password" placeholderTextColor={COLORS.text3} secureTextEntry />
-            
-            <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <MaterialIcons name="login" size={20} color="#fff" />
-                  <Text style={styles.submitText}>Login to Dashboard</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>HOSPITAL NAME *</Text>
-            <TextInput style={styles.input} value={hName} onChangeText={setHName} placeholder="Enter hospital name" placeholderTextColor={COLORS.text3} />
-            <Text style={styles.label}>CITY / TALUKA *</Text>
-            <TextInput style={styles.input} value={hCity} onChangeText={setHCity} placeholder="e.g. Pune" placeholderTextColor={COLORS.text3} />
-            <Text style={styles.label}>PHONE NUMBER *</Text>
-            <TextInput style={styles.input} value={hPhone} onChangeText={setHPhone} placeholder="10-digit phone number" placeholderTextColor={COLORS.text3} keyboardType="phone-pad" maxLength={13} />
-            <Text style={styles.label}>EMAIL (optional)</Text>
-            <TextInput style={styles.input} value={hEmail} onChangeText={setHEmail} placeholder="hospital@email.com" placeholderTextColor={COLORS.text3} keyboardType="email-address" />
-            <Text style={styles.label}>CREATE PASSWORD *</Text>
-            <TextInput style={styles.input} value={hPass} onChangeText={setHPass} placeholder="Create a strong password" placeholderTextColor={COLORS.text3} secureTextEntry />
-            
-            <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.6 }]} onPress={handleRegister} activeOpacity={0.85} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <MaterialIcons name="add-business" size={20} color="#fff" />
-                  <Text style={styles.submitText}>Register Hospital</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { paddingHorizontal: 20, paddingTop: 50 },
+  header: { paddingHorizontal: 20, paddingTop: 12 },
   backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface2, justifyContent: 'center', alignItems: 'center' },
   hospIcon: { width: 70, height: 70, borderRadius: 20, backgroundColor: COLORS.blueLight, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 16 },
   h1: { fontSize: 24, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: 4 },
@@ -164,3 +217,7 @@ const styles = StyleSheet.create({
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.blue, borderRadius: RADIUS.full, paddingVertical: 16, marginTop: 28, elevation: 6 },
   submitText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
+
+
+
+

@@ -1,39 +1,43 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, doc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  where,
+  addDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
 const AppContext = createContext();
 
-// Simple hash function for password security (not storing plain text)
 function hashPassword(password) {
   let hash = 0;
   for (let i = 0; i < password.length; i++) {
     const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
   }
   return 'h_' + Math.abs(hash).toString(36) + '_' + password.length;
 }
 
-// Phone number validation (Indian format)
 export function validatePhone(phone) {
+  if (!phone) return { valid: false, phone: '' };
   const cleaned = phone.replace(/[\s\-\+]/g, '');
-  // Accept 10-digit Indian numbers, with or without +91/91 prefix
   if (/^(\+?91)?[6-9]\d{9}$/.test(cleaned)) {
-    // Return just the last 10 digits
     return { valid: true, phone: cleaned.slice(-10) };
   }
   return { valid: false, phone: cleaned };
 }
 
-// Password validation
 export function validatePassword(password) {
   if (!password || password.length < 4) {
     return { valid: false, error: 'Password must be at least 4 characters long.' };
-  }
-  if (password.length > 50) {
-    return { valid: false, error: 'Password is too long.' };
   }
   return { valid: true };
 }
@@ -44,89 +48,167 @@ export function AppProvider({ children }) {
   const [donors, setDonors] = useState([]);
   const [requests, setRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [donorRequests, setDonorRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const mountedRef = useRef(true);
 
-  // 1. Check persistent local login
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Load persisted session first
   useEffect(() => {
     (async () => {
       try {
-        const savedUser = await AsyncStorage.getItem('currentUser');
-        const savedHospital = await AsyncStorage.getItem('currentHospital');
-        if (savedUser) setUser(JSON.parse(savedUser));
-        if (savedHospital) setHospital(JSON.parse(savedHospital));
-      } catch (e) { console.error(e); }
-      setIsLoading(false);
+        const [savedUser, savedHospital] = await Promise.all([
+          AsyncStorage.getItem('currentUser'),
+          AsyncStorage.getItem('currentHospital'),
+        ]);
+        if (mountedRef.current) {
+          if (savedUser) {
+            try {
+              setUser(JSON.parse(savedUser));
+            } catch (parseErr) {
+              console.warn('Failed to parse saved user:', parseErr);
+              await AsyncStorage.removeItem('currentUser');
+            }
+          }
+          if (savedHospital) {
+            try {
+              setHospital(JSON.parse(savedHospital));
+            } catch (parseErr) {
+              console.warn('Failed to parse saved hospital:', parseErr);
+              await AsyncStorage.removeItem('currentHospital');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load session:', e);
+      } finally {
+        if (mountedRef.current) {
+          setIsLoading(false);
+          setFirebaseReady(true);
+        }
+      }
     })();
   }, []);
 
-  // 2. Real-time Firebase Listeners
+  // Real-time listeners — only after firebase is ready
   useEffect(() => {
-    // Listen for donors
-    const unsubDonors = onSnapshot(collection(db, 'donors'), (snapshot) => {
-      setDonors(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error('Donors listener error:', error);
-    });
+    if (!firebaseReady) return;
 
-    // Listen for global emergency requests (without orderBy to avoid index requirement)
-    const unsubRequests = onSnapshot(collection(db, 'requests'), (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort client-side instead of requiring Firestore index
-      data.sort((a, b) => {
-        const aTime = a.createdAt?.toMillis?.() || 0;
-        const bTime = b.createdAt?.toMillis?.() || 0;
-        return bTime - aTime;
-      });
-      setRequests(data);
-    }, (error) => {
-      console.error('Requests listener error:', error);
-    });
+    let unsubDonors = () => {};
+    let unsubRequests = () => {};
 
-    return () => { unsubDonors(); unsubRequests(); };
-  }, []);
-
-  // Listen for user specific notifications
-  useEffect(() => {
-    if (!user && !hospital) return;
-    const targetId = user ? user.phone : hospital?.code;
-    if (!targetId) return;
-
-    const qNotif = query(collection(db, 'notifications'), where('targetId', '==', targetId));
-    const unsubNotif = onSnapshot(qNotif, (snapshot) => {
-      setNotifications(
-        snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .sort((a, b) => {
-            const aTime = a.createdAt?.toMillis?.() || 0;
-            const bTime = b.createdAt?.toMillis?.() || 0;
-            return bTime - aTime;
-          })
+    try {
+      unsubDonors = onSnapshot(
+        collection(db, 'donors'),
+        (snapshot) => {
+          if (mountedRef.current) {
+            setDonors(
+              snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+            );
+          }
+        },
+        (err) => {
+          console.warn('Donors sync error:', err);
+        }
       );
-    }, (error) => {
-      console.error('Notifications listener error:', error);
-    });
-    return () => unsubNotif();
-  }, [user, hospital]);
+    } catch (e) {
+      console.warn('Failed to setup donors listener:', e);
+    }
 
-  // ===== DONOR AUTH =====
+    try {
+      unsubRequests = onSnapshot(
+        collection(db, 'requests'),
+        (snapshot) => {
+          if (mountedRef.current) {
+            const data = snapshot.docs.map((d) => {
+              const item = d.data();
+              return {
+                id: d.id,
+                ...item,
+                createdAt: item.createdAt?.toMillis?.() || Date.now(),
+              };
+            });
+            data.sort((a, b) => b.createdAt - a.createdAt);
+            setRequests(data);
+          }
+        },
+        (err) => {
+          console.warn('Requests sync error:', err);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to setup requests listener:', e);
+    }
+
+    return () => {
+      unsubDonors();
+      unsubRequests();
+    };
+  }, [firebaseReady]);
+
+  // Notifications listener
+  useEffect(() => {
+    if (!firebaseReady) return;
+
+    const targetId = user?.phone || hospital?.code;
+    if (!targetId) {
+      setNotifications([]);
+      return;
+    }
+
+    let unsubNotif = () => {};
+
+    try {
+      const qNotif = query(
+        collection(db, 'notifications'),
+        where('targetId', '==', targetId)
+      );
+      unsubNotif = onSnapshot(
+        qNotif,
+        (snapshot) => {
+          if (mountedRef.current) {
+            const data = snapshot.docs.map((d) => ({
+              id: d.id,
+              ...d.data(),
+              createdAt: d.data().createdAt?.toMillis?.() || Date.now(),
+            }));
+            data.sort((a, b) => b.createdAt - a.createdAt);
+            setNotifications(data);
+          }
+        },
+        (err) => {
+          console.warn('Notifications sync error:', err);
+        }
+      );
+    } catch (e) {
+      console.warn('Failed to setup notifications listener:', e);
+    }
+
+    return () => unsubNotif();
+  }, [user, hospital, firebaseReady]);
+
+  // ─── Actions ────────────────────────────────────────
+
   const registerDonor = async (data) => {
     try {
-      // Validate phone
       const phoneResult = validatePhone(data.phone);
-      if (!phoneResult.valid) {
-        return { success: false, error: 'Please enter a valid 10-digit Indian phone number.' };
-      }
-      // Validate password
-      const passResult = validatePassword(data.password);
-      if (!passResult.valid) {
-        return { success: false, error: passResult.error };
-      }
-      // Check if phone already registered
-      const existingDoc = await getDoc(doc(db, 'donors', phoneResult.phone));
-      if (existingDoc.exists()) {
-        return { success: false, error: 'This phone number is already registered. Please login instead.' };
-      }
+      if (!phoneResult.valid)
+        return { success: false, error: 'Invalid phone number.' };
+
+      const passCheck = validatePassword(data.password);
+      if (!passCheck.valid)
+        return { success: false, error: passCheck.error };
+
+      const docRef = doc(db, 'donors', phoneResult.phone);
+      const existing = await getDoc(docRef);
+      if (existing.exists())
+        return { success: false, error: 'Phone already registered.' };
 
       const newDonor = {
         name: data.name.trim(),
@@ -134,75 +216,76 @@ export function AppProvider({ children }) {
         password: hashPassword(data.password),
         blood: data.blood,
         city: data.city.trim(),
-        lat: 18.52,
-        lng: 73.86,
-        lastDonation: data.lastDonation || '2025-01-01',
         available: true,
-        distance: Math.round(Math.random() * 80 + 5) / 10,
         role: 'donor',
         createdAt: serverTimestamp(),
       };
-      await setDoc(doc(db, 'donors', phoneResult.phone), newDonor);
-      
-      // Store without password hash and without non-serializable serverTimestamp locally
-      const localUser = { ...newDonor, phone: phoneResult.phone };
+      await setDoc(docRef, newDonor);
+
+      const localUser = { ...newDonor };
       delete localUser.password;
       delete localUser.createdAt;
+
       setUser(localUser);
       await AsyncStorage.setItem('currentUser', JSON.stringify(localUser));
       return { success: true, user: localUser };
     } catch (e) {
-      console.error("Firebase Registration Error", e);
-      return { success: false, error: 'Registration failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
+      console.warn('registerDonor error:', e);
+      return { success: false, error: e.message || 'Registration failed.' };
     }
   };
 
   const loginDonor = async (phone, password) => {
     try {
       const phoneResult = validatePhone(phone);
-      if (!phoneResult.valid) {
-        return { success: false, error: 'Please enter a valid 10-digit phone number.' };
-      }
+      if (!phoneResult.valid)
+        return { success: false, error: 'Invalid phone.' };
 
-      const docRef = doc(db, 'donors', phoneResult.phone);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().password === hashPassword(password)) {
+      const docSnap = await getDoc(doc(db, 'donors', phoneResult.phone));
+      if (
+        docSnap.exists() &&
+        docSnap.data().password === hashPassword(password)
+      ) {
         const data = docSnap.data();
-        const userData = { id: docSnap.id, name: data.name, phone: data.phone, blood: data.blood, city: data.city, lastDonation: data.lastDonation, available: data.available, distance: data.distance, role: data.role };
+        const userData = { ...data, id: docSnap.id };
+        delete userData.password;
+        delete userData.createdAt;
+
         setUser(userData);
         await AsyncStorage.setItem('currentUser', JSON.stringify(userData));
         return { success: true, user: userData };
       }
-      return { success: false, error: 'Invalid phone number or password.' };
+      return { success: false, error: 'Invalid credentials.' };
     } catch (e) {
-      console.error(e);
-      return { success: false, error: 'Login failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
+      console.warn('loginDonor error:', e);
+      return { success: false, error: e.message || 'Login failed.' };
     }
   };
 
   const logoutDonor = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem('currentUser');
+    try {
+      setUser(null);
+      await AsyncStorage.removeItem('currentUser');
+    } catch (e) {
+      console.warn('logoutDonor error:', e);
+    }
   };
 
-  // ===== HOSPITAL AUTH =====
   const registerHospital = async (data) => {
     try {
       const phoneResult = validatePhone(data.phone);
-      if (!phoneResult.valid) {
-        return { success: false, error: 'Please enter a valid 10-digit phone number.' };
-      }
-      const passResult = validatePassword(data.password);
-      if (!passResult.valid) {
-        return { success: false, error: passResult.error };
-      }
+      if (!phoneResult.valid)
+        return { success: false, error: 'Invalid phone.' };
 
-      const code = data.name.substring(0, 3).toUpperCase() + String(Math.floor(Math.random() * 900) + 100);
+      const code =
+        data.name.substring(0, 3).toUpperCase() +
+        String(Math.floor(Math.random() * 900) + 100);
+
       const newHosp = {
         name: data.name.trim(),
         city: data.city.trim(),
         phone: phoneResult.phone,
-        email: data.email?.trim() || '',
+        email: data.email || '',
         code,
         password: hashPassword(data.password),
         role: 'hospital',
@@ -214,52 +297,89 @@ export function AppProvider({ children }) {
       delete localHosp.password;
       delete localHosp.createdAt;
       setHospital(localHosp);
-      await AsyncStorage.setItem('currentHospital', JSON.stringify(localHosp));
+      await AsyncStorage.setItem(
+        'currentHospital',
+        JSON.stringify(localHosp)
+      );
       return { success: true, code };
     } catch (e) {
-      console.error(e);
-      return { success: false, error: 'Hospital registration failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
+      console.warn('registerHospital error:', e);
+      return { success: false, error: e.message || 'Registration failed.' };
     }
   };
 
   const loginHospitalAuth = async (code, password) => {
     try {
-      const docSnap = await getDoc(doc(db, 'hospitals', code.toUpperCase().trim()));
-      if (docSnap.exists() && docSnap.data().password === hashPassword(password)) {
+      const docSnap = await getDoc(
+        doc(db, 'hospitals', code.toUpperCase().trim())
+      );
+      if (
+        docSnap.exists() &&
+        docSnap.data().password === hashPassword(password)
+      ) {
         const data = docSnap.data();
-        const hospData = { id: docSnap.id, name: data.name, code: data.code, city: data.city, phone: data.phone, email: data.email, role: data.role };
+        const hospData = { ...data, id: docSnap.id };
+        delete hospData.password;
+        delete hospData.createdAt;
         setHospital(hospData);
-        await AsyncStorage.setItem('currentHospital', JSON.stringify(hospData));
+        await AsyncStorage.setItem(
+          'currentHospital',
+          JSON.stringify(hospData)
+        );
         return { success: true, hospital: hospData };
       }
-      return { success: false, error: 'Invalid hospital code or password.' };
+      return { success: false, error: 'Invalid hospital credentials.' };
     } catch (e) {
-      console.error(e);
-      return { success: false, error: 'Hospital login failed: ' + (e?.message || e?.code || 'Unknown error. Check internet.') };
+      console.warn('loginHospitalAuth error:', e);
+      return { success: false, error: e.message || 'Login failed.' };
     }
   };
 
   const logoutHospital = async () => {
-    setHospital(null);
-    await AsyncStorage.removeItem('currentHospital');
+    try {
+      setHospital(null);
+      await AsyncStorage.removeItem('currentHospital');
+    } catch (e) {
+      console.warn('logoutHospital error:', e);
+    }
   };
 
-  // ===== SHARED ACTIONS =====
   const addRequest = async (req) => {
     try {
-      const reqData = { ...req, time: 'Just now', distance: '1.2 km', accepted: [], status: 'active', createdAt: serverTimestamp() };
-      const docRef = await addDoc(collection(db, 'requests'), reqData);
-      
-      // Notify matching donors
-      const matching = donors.filter(d => d.blood === req.blood && d.available);
-      matching.forEach(d => {
-        addDoc(collection(db, 'notifications'), {
-          targetId: d.phone, type: 'emergency', title: `Urgent: ${req.blood} Blood Needed`,
-          desc: `${req.hospital} needs ${req.units} unit(s). Contact: ${req.contactPhone || req.contact}`, unread: true, createdAt: serverTimestamp()
-        });
-      });
-      return matching.length;
-    } catch (e) { console.error(e); return 0; }
+      const reqData = {
+        ...req,
+        status: 'active',
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, 'requests'), reqData);
+
+      // Notify matching donors safely
+      const matching = donors.filter(
+        (d) => d.blood === req.blood && d.available
+      );
+
+      if (matching.length > 0) {
+        await Promise.allSettled(
+          matching.map((d) =>
+            addDoc(collection(db, 'notifications'), {
+              targetId: d.phone,
+              type: 'emergency',
+              title: `Urgent: ${req.blood} Needed`,
+              desc: `${req.hospital} needs blood. Contact: ${
+                req.contactPhone || req.contact
+              }`,
+              unread: true,
+              createdAt: serverTimestamp(),
+            })
+          )
+        );
+      }
+
+      return { success: true };
+    } catch (e) {
+      console.warn('addRequest error:', e);
+      return { success: false, error: e.message || 'Failed to create request.' };
+    }
   };
 
   const acceptRequest = async (reqId) => {
@@ -270,54 +390,96 @@ export function AppProvider({ children }) {
       if (reqSnap.exists()) {
         const currentAccepted = reqSnap.data().accepted || [];
         if (!currentAccepted.includes(name)) {
-          await updateDoc(reqRef, { accepted: [...currentAccepted, name] });
+          await updateDoc(reqRef, {
+            accepted: [...currentAccepted, name],
+          });
         }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.warn('acceptRequest error:', e);
+    }
   };
 
   const sendDonorRequest = async (donor, bloodGroup, hospitalName) => {
     try {
       await addDoc(collection(db, 'notifications'), {
-        targetId: donor.phone, type: 'emergency', title: `🏥 ${hospitalName} Needs You!`,
-        desc: `${hospitalName} is requesting you to donate ${bloodGroup} blood. Please respond.`,
-        unread: true, createdAt: serverTimestamp()
+        targetId: donor.phone,
+        type: 'emergency',
+        title: `🏥 Request from ${hospitalName}`,
+        desc: `They are requesting ${bloodGroup} blood donation. Please respond.`,
+        unread: true,
+        createdAt: serverTimestamp(),
       });
-    } catch (e) { console.error(e); }
-  };
-
-  const toggleAvailability = async () => {
-    if (user) {
-      const updated = { ...user, available: !user.available };
-      setUser(updated);
-      await AsyncStorage.setItem('currentUser', JSON.stringify(updated));
-      if (user.phone) {
-        await updateDoc(doc(db, 'donors', user.phone), { available: updated.available });
-      }
+    } catch (e) {
+      console.warn('sendDonorRequest error:', e);
     }
   };
 
   const markAllRead = async () => {
     try {
-      const updates = notifications.filter(n => n.unread).map(n => 
-        updateDoc(doc(db, 'notifications', n.id), { unread: false })
-      );
-      await Promise.all(updates);
-    } catch (e) { console.error(e); }
+      const unread = notifications.filter((n) => n.unread);
+      if (unread.length > 0) {
+        await Promise.allSettled(
+          unread.map((n) =>
+            updateDoc(doc(db, 'notifications', n.id), { unread: false })
+          )
+        );
+      }
+    } catch (e) {
+      console.warn('markAllRead error:', e);
+    }
   };
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const toggleAvailability = async () => {
+    if (!user?.phone) return;
+    try {
+      const newStatus = !user.available;
+      const updated = { ...user, available: newStatus };
+      setUser(updated);
+      await AsyncStorage.setItem('currentUser', JSON.stringify(updated));
+      await updateDoc(doc(db, 'donors', user.phone), {
+        available: newStatus,
+      });
+    } catch (e) {
+      console.warn('toggleAvailability error:', e);
+      // Revert on failure
+      setUser(user);
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
-    <AppContext.Provider value={{
-      user, hospital, donors, requests, notifications, unreadCount, isLoading, donorRequests,
-      registerDonor, loginDonor, logoutDonor,
-      loginHospitalAuth, registerHospital, logoutHospital,
-      addRequest, acceptRequest, toggleAvailability, sendDonorRequest, markAllRead,
-    }}>
+    <AppContext.Provider
+      value={{
+        user,
+        hospital,
+        donors,
+        requests,
+        notifications,
+        unreadCount,
+        isLoading,
+        registerDonor,
+        loginDonor,
+        logoutDonor,
+        registerHospital,
+        loginHospitalAuth,
+        logoutHospital,
+        addRequest,
+        acceptRequest,
+        sendDonorRequest,
+        markAllRead,
+        toggleAvailability,
+        setHospital,
+        setUser,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
 }
 
-export function useApp() { return useContext(AppContext); }
+export function useApp() {
+  return useContext(AppContext);
+}

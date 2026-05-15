@@ -1,34 +1,36 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../utils/theme';
 
-export function RequestCard({ request, onAccept, onShare }) {
-  const urgency = request?.urgency || 'high';
+export const RequestCard = memo(({ request, onAccept, onShare }) => {
+  if (!request) return null;
+  const urgency = request.urgency || 'high';
   const isCritical = urgency === 'critical';
+
   return (
     <View style={[styles.card, isCritical && styles.cardUrgent]}>
       <View style={styles.top}>
-        <Text style={styles.blood}>{request?.blood || 'O+'}</Text>
+        <Text style={styles.blood}>{request.blood || 'O+'}</Text>
         <View style={[styles.badge, isCritical ? styles.badgeCritical : styles.badgeHigh]}>
           <Text style={[styles.badgeText, { color: isCritical ? COLORS.red : COLORS.amber }]}>
             {urgency.toUpperCase()}
           </Text>
         </View>
       </View>
-      <Text style={styles.hospital}>{request?.hospital || 'Hospital'}</Text>
+      <Text style={styles.hospital}>{request.hospital || 'Hospital'}</Text>
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <MaterialIcons name="schedule" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request?.time || 'Just now'}</Text>
+          <Text style={styles.metaText}>{request.time || 'Just now'}</Text>
         </View>
         <View style={styles.metaItem}>
           <MaterialIcons name="place" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request?.distance || 'Nearby'}</Text>
+          <Text style={styles.metaText}>{request.distance || 'Nearby'}</Text>
         </View>
         <View style={styles.metaItem}>
           <MaterialIcons name="water-drop" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{request?.units || 1} unit{(request?.units || 1) > 1 ? 's' : ''}</Text>
+          <Text style={styles.metaText}>{request.units || 1} unit{(request.units || 1) > 1 ? 's' : ''}</Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -42,13 +44,22 @@ export function RequestCard({ request, onAccept, onShare }) {
       </View>
     </View>
   );
-}
+});
 
-export function DonorCard({ donor, isAvail }) {
-  const name = donor?.name || 'Unknown Donor';
+export const DonorCard = memo(({ donor, isAvail }) => {
+  if (!donor) return null;
+  const name = donor.name || 'Unknown Donor';
   const initials = name.split(' ').map(w => w?.[0] || '').join('').substring(0, 2).toUpperCase() || 'U';
-  const lastDonation = donor?.lastDonation || '2025-01-01';
-  const days = Math.floor((Date.now() - new Date(lastDonation).getTime()) / (1000*60*60*24)) || 0;
+  const lastDonation = donor.lastDonation || '2025-01-01';
+
+  // Safe calculation for days since donation
+  let days = 0;
+  try {
+    const donationDate = new Date(lastDonation);
+    if (!isNaN(donationDate.getTime())) {
+      days = Math.floor((Date.now() - donationDate.getTime()) / (1000*60*60*24));
+    }
+  } catch (e) { console.error(e); }
   
   return (
     <View style={styles.donorCard}>
@@ -59,11 +70,11 @@ export function DonorCard({ donor, isAvail }) {
         <Text style={styles.donorName}>{name}</Text>
         <View style={styles.donorDetail}>
           <MaterialIcons name="water-drop" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>{donor?.blood || 'O+'} · {donor?.distance || 1.0} km</Text>
+          <Text style={styles.metaText}>{donor.blood || 'O+'} · {donor.distance || 1.0} km</Text>
         </View>
         <View style={styles.donorDetail}>
           <MaterialIcons name="event" size={13} color={COLORS.text2} />
-          <Text style={styles.metaText}>Donated {isNaN(days) ? 0 : days} days ago</Text>
+          <Text style={styles.metaText}>Donated {days < 0 ? 0 : days} days ago</Text>
         </View>
       </View>
       <View style={[styles.statusBadge, isAvail ? styles.statusAvail : styles.statusUnavail]}>
@@ -73,9 +84,9 @@ export function DonorCard({ donor, isAvail }) {
       </View>
     </View>
   );
-}
+});
 
-export function BloodChip({ group, count, selected, onPress }) {
+export const BloodChip = memo(({ group, count, selected, onPress }) => {
   return (
     <TouchableOpacity
       style={[styles.chip, selected && styles.chipSelected]}
@@ -86,16 +97,16 @@ export function BloodChip({ group, count, selected, onPress }) {
       <Text style={styles.chipCount}>{count} donor{count !== 1 ? 's' : ''}</Text>
     </TouchableOpacity>
   );
-}
+});
 
-export function StatCard({ value, label, color }) {
+export const StatCard = memo(({ value, label, color }) => {
   return (
     <View style={styles.statCard}>
-      <Text style={[styles.statNum, { color }]}>{value}</Text>
+      <Text style={[styles.statNum, { color }]}>{value || 0}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.bg2, borderRadius: RADIUS.md, padding: SPACING.lg, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
@@ -124,7 +135,7 @@ const styles = StyleSheet.create({
   statusAvail: { backgroundColor: COLORS.greenLight },
   statusUnavail: { backgroundColor: COLORS.surface },
   statusText: { fontSize: 9, fontWeight: '600' },
-  chip: { alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  chip: { width: '22%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderRadius: RADIUS.sm, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
   chipSelected: { borderColor: COLORS.red, backgroundColor: COLORS.redLight },
   chipGroup: { fontSize: 17, fontWeight: '800', color: COLORS.red },
   chipCount: { fontSize: 10, color: COLORS.text2, marginTop: 2 },

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
@@ -11,41 +11,42 @@ export default function HomeScreen({ navigation }) {
   const { donors, requests, unreadCount, acceptRequest } = useApp();
   const { showAlert, showToast } = useAlert();
   
-  // Animation Values
+  // Animation Values - Using Native Driver where possible
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
   const listFadeAnim = useRef(new Animated.Value(0)).current;
   const listTranslateAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    // 1. Live Dot Heartbeat Pulse
+    // 1. Live Dot Heartbeat Pulse (scale uses native driver)
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.8, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1.5, duration: 400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.delay(600),
       ])
     ).start();
 
-    // 2. Banner Glow Float Effect
+    // 2. Banner Glow Float Effect (translateY uses native driver)
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sine), useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ])
     ).start();
 
     // 3. Staggered List Entry
     Animated.parallel([
-      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: false })
+      Animated.timing(listFadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(listTranslateAnim, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
     ]).start();
   }, []);
 
-  const availCount = donors.filter(isDonorAvailable).length;
-  const criticalCount = requests.filter(r => r.urgency === 'critical').length;
+  const availCount = useMemo(() => (donors || []).filter(isDonorAvailable).length, [donors]);
+  const criticalCount = useMemo(() => (requests || []).filter(r => r.urgency === 'critical').length, [requests]);
 
   const handleAccept = (req) => {
+    if (!req?.id) return;
     acceptRequest(req.id);
     showAlert('Thank You! 🙏', `You've accepted the ${req.blood} request at ${req.hospital}.\n\nThe hospital has been notified and will contact you shortly.`);
     showToast('Request accepted! Hospital notified.');
@@ -58,10 +59,10 @@ export default function HomeScreen({ navigation }) {
           <MaterialIcons name="water-drop" size={22} color={COLORS.red} />
         </View>
         <Text style={styles.headerTitle}>Rakta-<Text style={{ color: COLORS.red }}>Seva</Text></Text>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
           <MaterialIcons name="person" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Notifications')}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Notifications')} activeOpacity={0.7}>
           <MaterialIcons name="notifications" size={22} color={COLORS.text} />
           {unreadCount > 0 && <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{unreadCount}</Text></View>}
         </TouchableOpacity>
@@ -82,16 +83,16 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.statsRow}>
-          <StatCard value={donors.length} label="Registered" color={COLORS.red} />
+          <StatCard value={donors?.length || 0} label="Registered" color={COLORS.red} />
           <StatCard value={availCount} label="Available" color={COLORS.green} />
-          <StatCard value={requests.length} label="Requests" color={COLORS.amber} />
+          <StatCard value={requests?.length || 0} label="Requests" color={COLORS.amber} />
         </View>
 
         <Animated.View style={{ opacity: listFadeAnim, transform: [{ translateY: listTranslateAnim }] }}>
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Blood Groups Available</Text></View>
           <View style={styles.bloodGrid}>
             {BLOOD_GROUPS.map(g => {
-              const count = donors.filter(d => d.blood === g && isDonorAvailable(d)).length;
+              const count = (donors || []).filter(d => d.blood === g && isDonorAvailable(d)).length;
               return <BloodChip key={g} group={g} count={count} onPress={() => navigation.navigate('Donors', { filterBlood: g })} />;
             })}
           </View>
@@ -101,9 +102,10 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity onPress={() => navigation.navigate('Find')}><Text style={styles.sectionLink}>See All</Text></TouchableOpacity>
           </View>
           <View style={styles.listPad}>
-            {requests.slice(0, 3).map(r => (
+            {(requests || []).slice(0, 3).map(r => (
               <RequestCard key={r.id} request={r} onAccept={handleAccept} onShare={() => showToast('📋 Request link copied!')} />
             ))}
+            {(!requests || requests.length === 0) && <Text style={styles.emptyNote}>No active requests found.</Text>}
           </View>
 
           <View style={styles.sectionHeader}>
@@ -111,9 +113,10 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity onPress={() => navigation.navigate('Donors')}><Text style={styles.sectionLink}>See All</Text></TouchableOpacity>
           </View>
           <View style={styles.listPad}>
-            {donors.filter(isDonorAvailable).slice(0, 3).map(d => (
+            {(donors || []).filter(isDonorAvailable).slice(0, 3).map(d => (
               <DonorCard key={d.id} donor={d} isAvail={true} />
             ))}
+             {(!donors || donors.length === 0) && <Text style={styles.emptyNote}>No nearby donors found.</Text>}
           </View>
         </Animated.View>
       </ScrollView>
@@ -123,7 +126,7 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 12, gap: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, gap: 10 },
   headerIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(220,20,60,0.12)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 20, fontWeight: '700', color: COLORS.text },
   headerBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface2, alignItems: 'center', justifyContent: 'center' },
@@ -142,4 +145,8 @@ const styles = StyleSheet.create({
   sectionLink: { fontSize: 12, fontWeight: '600', color: COLORS.red },
   bloodGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginBottom: 24 },
   listPad: { paddingHorizontal: 16 },
+  emptyNote: { color: COLORS.text3, fontSize: 12, textAlign: 'center', marginVertical: 10 }
 });
+
+
+

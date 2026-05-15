@@ -14,27 +14,28 @@ export default function SplashScreen({ navigation }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Start animations with useNativeDriver: true where supported
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: false }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
     ]).start();
     
+    // Width animation doesn't support useNativeDriver, so we keep it false for barAnim
+    // or we could animate scaleX. Let's keep it simple for now.
     Animated.timing(barAnim, { toValue: 1, duration: 2000, useNativeDriver: false }).start();
     
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
     ).start();
     
-    // Set ready after 2.5 seconds minimum visual display
     const timer = setTimeout(() => setIsReady(true), 2500);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    // Only navigate when both the animations have finished AND data has loaded
     if (isReady && !isLoading) {
       if (user) {
         navigation.replace('Main');
@@ -55,7 +56,9 @@ export default function SplashScreen({ navigation }) {
         <Text style={styles.title}>Rakta-<Text style={{ color: COLORS.red }}>Seva</Text></Text>
         <Text style={styles.subtitle}>Life-Saving Blood Donor Network</Text>
         <View style={styles.loaderTrack}>
-          <Animated.View style={[styles.loaderFill, { width: barAnim.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] }) }]} />
+          <Animated.View style={[styles.loaderFill, {
+            width: barAnim.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] })
+          }]} />
         </View>
       </Animated.View>
     </View>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
-import { BLOOD_GROUPS } from '../data/mockData';
+import { BLOOD_GROUPS, isDonorAvailable } from '../data/mockData';
 import { useApp } from '../utils/AppContext';
 import { useAlert } from '../components/CustomAlert';
 import { validatePhone } from '../utils/AppContext';
@@ -21,12 +21,12 @@ export default function NewRequestScreen({ navigation }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: false }),
-      Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 8, useNativeDriver: false })
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 8, useNativeDriver: true })
     ]).start();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!blood) { showAlert('Missing Field', 'Please select a blood group.'); return; }
     if (!hospital || hospital.trim().length < 3) { showAlert('Missing Field', 'Please enter a valid hospital name.'); return; }
     if (!contact) { showAlert('Missing Field', 'Please enter the contact person.'); return; }
@@ -37,26 +37,35 @@ export default function NewRequestScreen({ navigation }) {
       return;
     }
 
-    const matchCount = donors.filter(d => {
-      if (d.blood !== blood) return false;
-      const days = (Date.now() - new Date(d.lastDonation).getTime()) / (1000*60*60*24);
-      return d.available && days >= 90 && d.distance <= 10;
-    }).length;
+    try {
+      const matchCount = (donors || []).filter(d => {
+        return d.blood === blood && isDonorAvailable(d) && (d.distance || 0) <= 10;
+      }).length;
 
-    addRequest({ blood, units: parseInt(units) || 1, hospital, urgency: 'critical', contact, contactPhone: phoneResult.phone });
+      await addRequest({
+        blood,
+        units: parseInt(units) || 1,
+        hospital: hospital.trim(),
+        urgency: 'critical',
+        contact: contact.trim(),
+        contactPhone: phoneResult.phone
+      });
 
-    showAlert(
-      '🚨 Emergency Alert Sent!',
-      `Alert pushed to ${matchCount} matching ${blood} donors within 10km.\n\n🏥 Hospital: ${hospital}\n💉 Units: ${units}\n📞 Contact: ${phoneResult.phone}\n\nDonors will be notified within seconds.`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
-    showToast(`🚨 Alert sent to ${matchCount} ${blood} donors!`);
+      showAlert(
+        '🚨 Emergency Alert Sent!',
+        `Alert pushed to ${matchCount} matching ${blood} donors nearby.\n\nDonors will receive notifications instantly.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+      showToast(`🚨 Alert sent to ${matchCount} ${blood} donors!`);
+    } catch (e) {
+      showAlert('Error', 'Failed to send alert. Check your connection.');
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.h2}>🚨 New Emergency Request</Text>
@@ -71,7 +80,7 @@ export default function NewRequestScreen({ navigation }) {
           <Text style={styles.label}>BLOOD GROUP NEEDED *</Text>
           <View style={styles.bloodGrid}>
             {BLOOD_GROUPS.map(g => (
-              <TouchableOpacity key={g} style={[styles.bloodChip, blood === g && styles.bloodChipActive]} onPress={() => setBlood(g)}>
+              <TouchableOpacity key={g} style={[styles.bloodChip, blood === g && styles.bloodChipActive]} onPress={() => setBlood(g)} activeOpacity={0.7}>
                 <Text style={[styles.bloodText, blood === g && styles.bloodTextActive]}>{g}</Text>
               </TouchableOpacity>
             ))}
@@ -101,7 +110,7 @@ export default function NewRequestScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 50, paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
   backBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: COLORS.surface2, justifyContent: 'center', alignItems: 'center' },
   h2: { fontSize: 18, fontWeight: '700', color: COLORS.text },
   urgentBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: RADIUS.sm, backgroundColor: 'rgba(220,20,60,0.12)', marginBottom: 20 },
@@ -113,6 +122,7 @@ const styles = StyleSheet.create({
   bloodChipActive: { backgroundColor: 'rgba(220,20,60,0.12)', borderColor: COLORS.red },
   bloodText: { fontSize: 16, fontWeight: '800', color: COLORS.text2 },
   bloodTextActive: { color: COLORS.red },
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.red, borderRadius: RADIUS.full, paddingVertical: 16, marginTop: 32, elevation: 6, shadowColor: COLORS.red, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.red, borderRadius: RADIUS.full, paddingVertical: 16, marginTop: 32, elevation: 6 },
   submitText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
+

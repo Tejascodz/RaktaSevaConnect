@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity, FlatList } from 'react-native';
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, RADIUS } from '../utils/theme';
 
@@ -37,20 +39,21 @@ export default function OnboardingScreen({ navigation }) {
   const flatListRef = useRef(null);
 
   useEffect(() => {
+    // Pulse and Rotation can both use Native Driver
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: false })
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
       ])
     ).start();
 
     Animated.loop(
-      Animated.timing(rotateAnim, { toValue: 1, duration: 10000, useNativeDriver: false })
+      Animated.timing(rotateAnim, { toValue: 1, duration: 10000, useNativeDriver: true })
     ).start();
   }, []);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
+    if (viewableItems && viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index ?? 0);
     }
   }).current;
@@ -109,8 +112,7 @@ export default function OnboardingScreen({ navigation }) {
       )}
 
       {/* Slides */}
-      <FlatList
-        ref={flatListRef}
+      <AnimatedFlatList ref={flatListRef}
         data={slides}
         renderItem={renderSlide}
         keyExtractor={(item) => item.id}
@@ -118,7 +120,7 @@ export default function OnboardingScreen({ navigation }) {
         pagingEnabled
         bounces={false}
         showsHorizontalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewConfig}
@@ -312,3 +314,4 @@ const styles = StyleSheet.create({
     color: COLORS.blue,
   },
 });
+
