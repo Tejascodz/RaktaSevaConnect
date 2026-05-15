@@ -68,3 +68,15 @@ fix-navigation.ps1
 
 # Android folder (too large)
 android/
+
+# Dist folder (built web output - auto generated)
+dist/
+
+# Google services (contains app credentials)
+google-services.json
+
+# Backup files
+src/screens/OnboardingScreen.js.backup
+
+# IDE
+.idea/
