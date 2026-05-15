@@ -17,6 +17,20 @@
 
 ---
 
+## 🎓 About This Project
+
+This application was developed as part of the **Industrial Internship (BINT803B)** at **JSS Academy of Technical Education, Bengaluru** under the guidance of:
+
+- **External Guide:** Mr. Tirumal Mutalikdesai, Program Coordinator, MindMatrix
+- **Internal Guide:** Mrs. N Nagarathna, Assistant Professor, Dept. of E&IE
+
+**Student:** Tejas S (1JS22EI049)
+**Department:** Electronics & Instrumentation Engineering
+**University:** Visvesvaraya Technological University (VTU)
+**Academic Year:** 2025-2026
+
+---
+
 ## 📱 About the App
 
 **RaktaSevaConnect** (meaning "Blood Service Connection") is a dual-role real-time mobile application built to solve the critical problem of blood donation coordination in India. Hospitals face emergencies where they cannot quickly reach nearby blood donors, and donors have no way to know when their blood group is urgently needed.
@@ -304,22 +318,6 @@ App.js (ErrorBoundary + NavigationContainer)
 | APK Size | ~64 MB |
 | Target Platform | Android |
 | Min SDK | Android 6.0+ |
-
----
-
-## 🎓 About This Project
-
-This application was developed as part of the **Industrial Internship (BINT803B)** at **JSS Academy of Technical Education, Bengaluru** under the guidance of:
-
-- **External Guide:** Mr. Tirumal Mutalikdesai, Program Coordinator, MindMatrix
-- **Internal Guide:** Mrs. N Nagarathna, Assistant Professor, Dept. of E&IE
-
-**Student:** Tejas S (1JS22EI049)
-**Department:** Electronics & Instrumentation Engineering
-**University:** Visvesvaraya Technological University (VTU)
-**Academic Year:** 2025-2026
-
-The project was developed using **AI-assisted development workflows** with Claude AI (Anthropic) for code generation, debugging, architecture design, and workflow optimization.
 
 ---
 
